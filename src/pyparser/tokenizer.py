@@ -1,4 +1,6 @@
 import string
+from pyparser import tokens
+
 
 _NUMBERS_ALPHABET = set(str(i) for i in range(10))
 _SIGNS_ALPHABET = {'+', '-'}
@@ -8,7 +10,7 @@ _OPERATORS = {'+', '-', '*', '/', '^'}
 _STR_ALPHABET = set(string.ascii_letters) | {'_'}
 
 
-def _parse_number(expr: str, idx: int) -> (int, str):
+def _parse_number(expr: str, idx: int) -> (int, tokens.FloatToken | tokens.IntToken):
     expr_len = len(expr)
     found_dot = False
     current_token = []
@@ -27,10 +29,17 @@ def _parse_number(expr: str, idx: int) -> (int, str):
 
     if current_token and current_token[-1] == '.':
         raise ValueError(f'Numbers cannot end with trailing dot in {"".join(current_token)}')
-    return idx, ''.join(current_token)
+
+    number_as_str = ''.join(current_token)
+    if found_dot:
+        token = tokens.FloatToken(position=start_idx, value=float(number_as_str))
+    else:
+        token = tokens.IntToken(position=start_idx, value=int(number_as_str))
+
+    return idx, token
 
 
-def _parse_string_value(expr: str, idx: int) -> (int, str):
+def _parse_string_value(expr: str, idx: int) -> (int, tokens.StringToken):
     expr_len = len(expr)
 
     token_size = 0
@@ -39,10 +48,10 @@ def _parse_string_value(expr: str, idx: int) -> (int, str):
         token_size += 1
         idx += 1
 
-    return idx, expr[start_idx:start_idx+token_size]
+    return idx, tokens.StringToken(position=start_idx, value=expr[start_idx:start_idx+token_size])
 
 
-def tokenize(expr: str) -> list[str]:
+def tokenize(expr: str) -> list[tokens.Token]:
     idx = 0
     expr = expr.replace(' ', '')
     expr_len = len(expr)
@@ -58,16 +67,16 @@ def tokenize(expr: str) -> list[str]:
             idx, new_token = _parse_string_value(expr, idx)
             parsed_tokens.append(new_token)
         elif current_char in _SIGNS_ALPHABET:
-            parsed_tokens.append(current_char)
+            parsed_tokens.append(tokens.OperatorToken(position=idx, value=current_char))
             idx += 1
         elif current_char == _OPEN_PAR:
-            parsed_tokens.append('(')
+            parsed_tokens.append(tokens.OpenParensToken(position=idx, value='('))
             idx += 1
         elif current_char == _CLOSE_PAR:
-            parsed_tokens.append(')')
+            parsed_tokens.append(tokens.CloseParensToken(position=idx, value=')'))
             idx += 1
         elif current_char in _OPERATORS:
-            parsed_tokens.append(current_char)
+            parsed_tokens.append(tokens.OperatorToken(position=idx, value=current_char))
             idx += 1
         else:
             raise ValueError('Unexpected token')

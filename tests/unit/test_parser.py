@@ -147,6 +147,7 @@ def test_unary_with_parens():
 
     assert actual == expected
 
+
 def test_subtraction_is_left_associative():
     # 8 - 3 - 2 -> (8 - 3) - 2
     actual = parser.parse([

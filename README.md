@@ -1,11 +1,13 @@
 # pyparser
 
-A small arithmetic expression parser and evaluator written in pure Python.
+A small arithmetic expression parser, evaluator and pretty-printer written in pure Python.
 
-Expressions go through three stages:
+Expressions are tokenized and parsed into a tree, which can then be evaluated or printed:
 
 ```
-"2 * x + y"  ─ tokenize ─▶  list[Token]  ─ parse ─▶  AST  ─ evaluate(variables) ─▶  8.5
+                                                      ┌─ evaluate(variables) ─▶  8.5
+"2 * x + y"  ─ tokenize ─▶  list[Token]  ─ parse ─▶  AST
+                                                      └─ to_string ─▶  "2 * x + y"
 ```
 
 ## Supported operations
@@ -76,6 +78,20 @@ Indexed variables are bound to a sequence of numbers:
 tree = parser.parse(tokenizer.tokenize('x[0] * x[1] + y'))
 evaluator.evaluate(tree, {'x': [2, 3], 'y': 1})  # 7
 ```
+
+### Pretty-printing
+
+`printer.to_string` turns a tree back into text, normalizing spacing and keeping only the parentheses needed to parse it back into the same tree:
+
+```python
+from pyparser.operations import printer
+
+printer.to_string(parser.parse(tokenizer.tokenize('((1-2))-(3-4)')))  # '1 - 2 - (3 - 4)'
+printer.to_string(parser.parse(tokenizer.tokenize('(2^3)^(2^1)')))    # '(2 ^ 3) ^ 2 ^ 1'
+```
+
+Parsing the printed text always gives back an equal tree. Parentheses are kept even when the result wouldn't change (`1 + (2 + 3)`), since dropping them would change the tree's shape.
+Floats that Python prints in scientific notation (e.g. `1e-07`) can't be tokenized back.
 
 ## Errors
 

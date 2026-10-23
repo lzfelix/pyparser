@@ -13,6 +13,10 @@ def _float(f: float) -> ast.TerminalNode:
     return ast.TerminalNode(tokens.FloatToken(f, 0))
 
 
+def _var(name: str, position: int = 0) -> ast.TerminalNode:
+    return ast.TerminalNode(tokens.StringToken(name, position))
+
+
 def _unary(operator: str, expr: ast.Node) -> ast.UnaryNode:
     return ast.UnaryNode(tokens.OperatorToken(operator, 0), expr)
 
@@ -102,3 +106,51 @@ def test_unsupported_binary_operator_raises():
 def test_unsupported_unary_operator_raises():
     with pytest.raises(EvaluationError):
         evaluator.evaluate(_unary('*', _int(3)))
+
+
+def test_variable_evaluates_to_its_value():
+    assert evaluator.evaluate(_var('x'), {'x': 3}) == 3
+
+
+def test_variable_can_hold_float():
+    assert evaluator.evaluate(_var('x'), {'x': 2.5}) == 2.5
+
+
+def test_variables_inside_binary_expression():
+    # x * y
+    assert evaluator.evaluate(_binary(_var('x'), '*', _var('y')), {'x': 3, 'y': 4}) == 12
+
+
+def test_variable_used_multiple_times():
+    # x * x
+    assert evaluator.evaluate(_binary(_var('x'), '*', _var('x')), {'x': 5}) == 25
+
+
+def test_unary_applied_to_variable():
+    # -x
+    assert evaluator.evaluate(_unary('-', _var('x')), {'x': 3}) == -3
+
+
+def test_unused_variables_are_ignored():
+    assert evaluator.evaluate(_int(3), {'x': 1}) == 3
+
+
+def test_undefined_variable_raises():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_var('x'), {'y': 1})
+
+
+def test_variable_without_bindings_raises():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_var('x'))
+
+
+def test_undefined_variable_error_has_position():
+    with pytest.raises(EvaluationError) as exc_info:
+        evaluator.evaluate(_binary(_int(2), '+', _var('x', position=2)), {})
+    assert exc_info.value.position == 2
+
+
+def test_variable_names_are_case_sensitive():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_var('X'), {'x': 1})

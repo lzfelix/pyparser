@@ -1,6 +1,7 @@
 from pyparser.errors import ParserError
 from pyparser.lexer import tokens
 from pyparser.parser import ast
+from pyparser.parser.token_container import TokenContainer
 
 """
     Grammar
@@ -10,75 +11,67 @@ from pyparser.parser import ast
     primary := NUMBER | VARIABLE | '(' expr ')'
 """
 
-def _expect_more_tokens(expression: list[tokens.Token], idx: int) -> None:
-    if idx >= len(expression):
-        raise ParserError('Unexpected end of expression.')
 
-
-def _parse_primary(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
-    _expect_more_tokens(expression, idx)
-    head = expression[idx]
+def _parse_primary(container: TokenContainer) -> ast.Node:
+    head = container.next()
 
     match head:
         case tokens.IntToken() | tokens.FloatToken() | tokens.StringToken() as token:
-            return ast.TerminalNode(expr=token), idx + 1
+            return ast.TerminalNode(expr=token)
         case tokens.OpenParensToken():
-            expr_node, idx = _parse_expression(expression, idx + 1)
-            _expect_more_tokens(expression, idx)
-            if not isinstance(expression[idx], tokens.CloseParensToken):
-                raise ParserError(f'Expected token ")" but "{expression[idx]}" found.', position=expression[idx].position)
-            return expr_node, idx+1
+            expr_node = _parse_expression(container)
+            closing = container.next()
+            if not isinstance(closing, tokens.CloseParensToken):
+                raise ParserError(f'Expected token ")" but "{closing}" found.', position=closing.position)
+            return expr_node
         case _:
             raise ParserError(f'Unexpected token of type {type(head)} at position {head.position}.', position=head.position)
 
 
-def _parse_unary(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
-    _expect_more_tokens(expression, idx)
-    match expression[idx]:
+def _parse_unary(container: TokenContainer) -> ast.Node:
+    match container.peek():
         case tokens.OperatorToken(value='+' | '-'):
-            operator = expression[idx]
-            expr, idx = _parse_unary(expression, idx + 1)
-            return ast.UnaryNode(operator=operator, expr=expr), idx
+            operator = container.next()
+            expr = _parse_unary(container)
+            return ast.UnaryNode(operator=operator, expr=expr)
         case _:
-            return _parse_primary(expression, idx)
+            return _parse_primary(container)
 
 
-def _parse_term(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
-    left, idx = _parse_unary(expression, idx)
-    while idx < len(expression):
-        match expression[idx]:
+def _parse_term(container: TokenContainer) -> ast.Node:
+    left = _parse_unary(container)
+    while not container.is_exhausted():
+        match container.peek():
             case tokens.OperatorToken(value='*' | '/'):
-                operator = expression[idx]
-
-                idx += 1
-                right, idx = _parse_unary(expression, idx)
+                operator = container.next()
+                right = _parse_unary(container)
                 left = ast.BinaryNode(left, operator, right)
 
             case _:
                 break
 
-    return left, idx
+    return left
 
 
-def _parse_expression(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
-    left, idx = _parse_term(expression, idx)
+def _parse_expression(container: TokenContainer) -> ast.Node:
+    left = _parse_term(container)
 
-    while idx < len(expression):
-        match expression[idx]:
+    while not container.is_exhausted():
+        match container.peek():
             case tokens.OperatorToken(value='+' | '-'):
-                operator = expression[idx]
-
-                idx += 1
-                right, idx = _parse_term(expression, idx)
+                operator = container.next()
+                right = _parse_term(container)
                 left = ast.BinaryNode(left, operator, right)
 
             case _:
                 break
-    return left, idx
+    return left
 
 
 def parse(expression: list[tokens.Token]) -> ast.Node:
-    node, idx = _parse_expression(expression, idx=0)
-    if idx != len(expression):
-        raise ParserError(f'Unexpected token "{expression[idx]}"', position=expression[idx].position)
+    container = TokenContainer(expression)
+    node = _parse_expression(container)
+    if not container.is_exhausted():
+        token = container.peek()
+        raise ParserError(f'Unexpected token "{token}"', position=token.position)
     return node

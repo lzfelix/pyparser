@@ -92,3 +92,13 @@ def test_division_by_zero_raises():
 def test_unknown_node_raises():
     with pytest.raises(EvaluationError):
         evaluator.evaluate(ast.Node())
+
+
+def test_unsupported_binary_operator_raises():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_binary(_int(2), '^', _int(3)))
+
+
+def test_unsupported_unary_operator_raises():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_unary('*', _int(3)))

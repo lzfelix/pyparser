@@ -8,6 +8,8 @@ def _evaluate_unary(unary: ast.UnaryNode) -> int | float:
             return evaluate(unary.expr)
         case '-':
             return -evaluate(unary.expr)
+        case _:
+            raise errors.EvaluationError(f'Unsupported unary operation "{unary.operator.value}"')
 
 
 def _evaluate_terminal(terminal: ast.TerminalNode) -> int | float:
@@ -28,6 +30,8 @@ def _evaluate_binary(binary: ast.BinaryNode) -> int | float:
             return left * right
         case '/':
             return left / right  # Delegating division by zero to Python
+        case _:
+            raise errors.EvaluationError(f'Unsupported operation "{binary.operator.value}"')
 
 
 def evaluate(root: ast.Node) -> int | float:

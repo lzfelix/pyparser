@@ -16,6 +16,10 @@ def _var(name: str, position: int | None = None) -> ast.VariableNode:
     return ast.VariableNode(name, position=position)
 
 
+def _indexed(name: str, index: int, position: int | None = None) -> ast.IndexedVariableNode:
+    return ast.IndexedVariableNode(name, index, position=position)
+
+
 def _unary(operator: str, expr: ast.Node) -> ast.UnaryNode:
     return ast.UnaryNode(operator, expr)
 
@@ -184,3 +188,45 @@ def test_nested_power_follows_tree_structure():
 def test_power_with_variables():
     # x ^ n
     assert evaluator.evaluate(_binary(_var('x'), '^', _var('n')), {'x': 3, 'n': 2}) == 9
+
+
+def test_indexed_variable_evaluates_to_its_item():
+    assert evaluator.evaluate(_indexed('x', 1), {'x': [10, 20, 30]}) == 20
+
+
+def test_indexed_variable_accepts_tuples():
+    assert evaluator.evaluate(_indexed('x', 0), {'x': (1.5, 2.5)}) == 1.5
+
+
+def test_indexed_variables_inside_binary_expression():
+    # x[0] * x[2]
+    assert evaluator.evaluate(_binary(_indexed('x', 0), '*', _indexed('x', 2)), {'x': [2, 0, 5]}) == 10
+
+
+def test_undefined_indexed_variable_raises():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_indexed('x', 0), {})
+
+
+def test_index_out_of_range_raises():
+    with pytest.raises(EvaluationError) as exc_info:
+        evaluator.evaluate(_indexed('x', 3, position=4), {'x': [1, 2, 3]})
+    assert exc_info.value.position == 4
+
+
+def test_negative_index_raises():
+    # The parser can't produce a negative index, but the evaluator must not
+    # fall back to Python's "count from the end" semantics either
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_indexed('x', -1), {'x': [1, 2, 3]})
+
+
+def test_indexing_single_value_raises():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_indexed('y', 0), {'y': 2.0})
+
+
+def test_multiple_values_without_index_raises():
+    with pytest.raises(EvaluationError) as exc_info:
+        evaluator.evaluate(_binary(_var('x', position=0), '+', _int(1)), {'x': [1, 2, 3]})
+    assert exc_info.value.position == 0

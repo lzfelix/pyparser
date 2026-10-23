@@ -1,5 +1,6 @@
 import math
-from collections.abc import Mapping
+import numbers
+from collections.abc import Mapping, Sequence
 
 from pyparser import errors
 from pyparser.parser import ast
@@ -13,7 +14,10 @@ _FUNCTIONS = {
 }
 
 
-def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None) -> int | float:
+type Value = int | float | Sequence[int | float]
+
+
+def evaluate(root: ast.Node, variables: Mapping[str, Value] | None = None) -> int | float:
     variables = variables or {}
 
     def _evaluate_unary(unary: ast.UnaryNode) -> int | float:
@@ -25,10 +29,34 @@ def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None)
             case _:
                 raise errors.EvaluationError(f'Unsupported unary operation "{unary.operator}"', position=unary.position)
 
+    def _lookup(name: str, position: int | None) -> Value:
+        if name not in variables:
+            raise errors.EvaluationError(f'Undefined variable "{name}"', position=position)
+        return variables[name]
+
     def _evaluate_variable(variable: ast.VariableNode) -> int | float:
-        if variable.name not in variables:
-            raise errors.EvaluationError(f'Undefined variable "{variable.name}"', position=variable.position)
-        return variables[variable.name]
+        value = _lookup(variable.name, variable.position)
+        if not isinstance(value, numbers.Number):
+            raise errors.EvaluationError(
+                f'Variable "{variable.name}" holds multiple values and must be indexed',
+                position=variable.position,
+            )
+        return value
+
+    def _evaluate_indexed_variable(variable: ast.IndexedVariableNode) -> int | float:
+        values = _lookup(variable.name, variable.position)
+        if isinstance(values, numbers.Number):
+            raise errors.EvaluationError(
+                f'Variable "{variable.name}" holds a single value and cannot be indexed',
+                position=variable.position,
+            )
+        # Negative indices are rejected explicitly instead of letting Python count from the end
+        if not 0 <= variable.index < len(values):
+            raise errors.EvaluationError(
+                f'Index {variable.index} out of range for "{variable.name}" with {len(values)} values',
+                position=variable.position,
+            )
+        return values[variable.index]
 
     def _evaluate_binary(binary: ast.BinaryNode) -> int | float:
         left = _evaluate(binary.left)
@@ -70,6 +98,8 @@ def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None)
                 return number.value
             case ast.VariableNode() as variable:
                 return _evaluate_variable(variable)
+            case ast.IndexedVariableNode() as variable:
+                return _evaluate_indexed_variable(variable)
             case ast.BinaryNode() as binary:
                 return _evaluate_binary(binary)
             case ast.FunctionCallNode() as fn_call:

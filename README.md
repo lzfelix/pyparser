@@ -59,7 +59,7 @@ primary := NUMBER | VARIABLE | VARIABLE '[' INT ']' | FUN_NAME '(' expr ')' | '(
 ```python
 from pyparser.lexer import tokenizer
 from pyparser.parser import parser
-from pyparser.evaluators import evaluator
+from pyparser.operations import evaluator
 
 tree = parser.parse(tokenizer.tokenize('2 * x + y'))
 

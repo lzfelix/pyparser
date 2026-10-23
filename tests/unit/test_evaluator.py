@@ -1,6 +1,6 @@
 import pytest
 from pyparser.errors import EvaluationError
-from pyparser.evaluators import evaluator
+from pyparser.operations import evaluator
 from pyparser.parser import ast
 
 

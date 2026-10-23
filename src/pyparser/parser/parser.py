@@ -9,22 +9,34 @@ from pyparser.parser.token_container import TokenContainer
     term    := unary (('*' | '/') unary)*
     unary   := ('+' | '-') unary | power
     power   := primary ('^' unary)?
-    primary := NUMBER | VARIABLE | '(' expr ')'
+    primary := NUMBER | VARIABLE | FUN_NAME '(' expr ')' | '(' expr ')'
 """
+
+
+def _parse_parenthesized(container: TokenContainer) -> ast.Node:
+    # Parses `expr ')'`, the opening parens must have already been consumed
+    expr_node = _parse_expression(container)
+    closing = container.next()
+    if not isinstance(closing, tokens.CloseParensToken):
+        raise ParserError(f'Expected token ")" but "{closing}" found.', position=closing.position)
+    return expr_node
 
 
 def _parse_primary(container: TokenContainer) -> ast.Node:
     head = container.next()
 
     match head:
-        case tokens.IntToken() | tokens.FloatToken() | tokens.StringToken() as token:
+        case tokens.IntToken() | tokens.FloatToken() as token:
             return ast.TerminalNode(expr=token)
+        case tokens.StringToken() as token:
+            if not container.is_exhausted() and isinstance(container.peek(), tokens.OpenParensToken):
+                container.next()  # Consume open parens
+                arg = _parse_parenthesized(container)
+                return ast.FunctionCallNode(fn_name=token, arg=arg)
+            else:
+                return ast.TerminalNode(expr=token)
         case tokens.OpenParensToken():
-            expr_node = _parse_expression(container)
-            closing = container.next()
-            if not isinstance(closing, tokens.CloseParensToken):
-                raise ParserError(f'Expected token ")" but "{closing}" found.', position=closing.position)
-            return expr_node
+            return _parse_parenthesized(container)
         case _:
             raise ParserError(f'Unexpected token of type {type(head)} at position {head.position}.', position=head.position)
 

@@ -352,6 +352,119 @@ def test_parens_override_power_associativity():
     assert actual == expected
 
 
+def test_parse_function_call():
+    # sin(x + 2)
+    actual = parser.parse([
+        tokens.StringToken('sin', 0),
+        tokens.OpenParensToken('(', 1),
+        tokens.StringToken('x', 2),
+        tokens.OperatorToken('+', 3),
+        tokens.IntToken(2, 4),
+        tokens.CloseParensToken(')', 5)
+    ])
+
+    expected = ast.FunctionCallNode(
+        fn_name=tokens.StringToken('sin', 0),
+        arg=ast.BinaryNode(
+            ast.TerminalNode(tokens.StringToken('x', 2)),
+            tokens.OperatorToken('+', 3),
+            _int(2, 4)
+        )
+    )
+
+    assert actual == expected
+
+
+def test_parse_nested_function_call():
+    # cos(tan(x))
+    actual = parser.parse([
+        tokens.StringToken('cos', 0),
+        tokens.OpenParensToken('(', 1),
+        tokens.StringToken('tan', 2),
+        tokens.OpenParensToken('(', 3),
+        tokens.StringToken('x', 4),
+        tokens.CloseParensToken(')', 5),
+        tokens.CloseParensToken(')', 6)
+    ])
+
+    expected = ast.FunctionCallNode(
+        fn_name=tokens.StringToken('cos', 0),
+        arg=ast.FunctionCallNode(
+            fn_name=tokens.StringToken('tan', 2),
+            arg=ast.TerminalNode(tokens.StringToken('x', 4))
+        )
+    )
+
+    assert actual == expected
+
+
+def test_function_call_followed_by_addition():
+    # sin(x) + 1 -> (sin(x)) + 1
+    actual = parser.parse([
+        tokens.StringToken('sin', 0),
+        tokens.OpenParensToken('(', 1),
+        tokens.StringToken('x', 2),
+        tokens.CloseParensToken(')', 3),
+        tokens.OperatorToken('+', 4),
+        tokens.IntToken(1, 5),
+    ])
+
+    expected = ast.BinaryNode(
+        ast.FunctionCallNode(
+            fn_name=tokens.StringToken('sin', 0),
+            arg=ast.TerminalNode(tokens.StringToken('x', 2)),
+        ),
+        tokens.OperatorToken('+', 4),
+        _int(1, 5),
+    )
+
+    assert actual == expected
+
+
+def test_function_call_raised_to_power():
+    # sin(x) ^ 2 -> (sin(x)) ^ 2
+    actual = parser.parse([
+        tokens.StringToken('sin', 0),
+        tokens.OpenParensToken('(', 1),
+        tokens.StringToken('x', 2),
+        tokens.CloseParensToken(')', 3),
+        tokens.OperatorToken('^', 4),
+        tokens.IntToken(2, 5),
+    ])
+
+    expected = ast.BinaryNode(
+        ast.FunctionCallNode(
+            fn_name=tokens.StringToken('sin', 0),
+            arg=ast.TerminalNode(tokens.StringToken('x', 2)),
+        ),
+        tokens.OperatorToken('^', 4),
+        _int(2, 5),
+    )
+
+    assert actual == expected
+
+
+def test_unary_sign_applies_to_function_call():
+    # -sin(x) -> -(sin(x))
+    actual = parser.parse([
+        tokens.OperatorToken('-', 0),
+        tokens.StringToken('sin', 1),
+        tokens.OpenParensToken('(', 2),
+        tokens.StringToken('x', 3),
+        tokens.CloseParensToken(')', 4),
+    ])
+
+    expected = ast.UnaryNode(
+        tokens.OperatorToken('-', 0),
+        ast.FunctionCallNode(
+            fn_name=tokens.StringToken('sin', 1),
+            arg=ast.TerminalNode(tokens.StringToken('x', 3)),
+        ),
+    )
+
+    assert actual == expected
+
+
 def test_incomplete_power_expression_should_raise():
     # 2 ^
     with pytest.raises(ParserError):

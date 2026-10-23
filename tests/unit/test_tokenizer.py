@@ -99,3 +99,7 @@ def test_tokenize_unknown_symbol():
 
 def test_should_accept_nonsensical_expressions():
     assert tokenize_values('+-*/)3(4') == ['+', '-', '*', '/', ')', '3', '(', '4']
+
+
+def test_tokenize_function_call():
+    assert tokenize_values('sin(x + 2)') == ['sin', '(', 'x', '+', '2', ')']

@@ -66,6 +66,9 @@ def test_subtraction_with_unary_operator():
         pytest.param('2 ^', ParserError, id='missing-exponent'),
         pytest.param('^ 2', ParserError, id='missing-base'),
         pytest.param('2 ^ ^ 3', ParserError, id='repeated-power-operator'),
+        pytest.param('sin(0 1', ParserError, id='call-with-stray-token-instead-of-close-parens'),
+        pytest.param('sin(0', ParserError, id='unclosed-call'),
+        pytest.param('sin()', ParserError, id='call-without-argument'),
     ],
 )
 def test_malformed_expression_should_raise(expression: str, expected_error: type[Exception]):

@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from pyparser.errors import EvaluationError
@@ -84,6 +86,13 @@ def test_undefined_variable_reports_its_position():
         pytest.param('2 ^ -1', 0.5, id='negative-exponent'),
         pytest.param('4 ^ 0.5', 2.0, id='fractional-exponent'),
         pytest.param('2 ^ (1 + 2)', 8, id='expression-exponent'),
+        pytest.param('sin(0)', 0, id='simple-function-call'),
+        pytest.param('sin(0) + 1', 1, id='simple-function-call-with-addition'),
+        pytest.param('2 * cos(0) + 1', 3, id='call-inside-expression'),
+        pytest.param('cos(0) * 2', 2, id='call-followed-by-multiplication'),
+        pytest.param('log(1) - 5', -5, id='call-followed-by-subtraction'),
+        pytest.param('cos(sin(0))', 1.0, id='nested-function-call'),
+        pytest.param('sin(1.21)^2 + cos(1.21)^2', 1, id='call-raised-to-power')
     ],
 )
 def test_power(expression: str, expected: int | float):
@@ -92,3 +101,17 @@ def test_power(expression: str, expected: int | float):
 
 def test_power_with_variables():
     assert _eval('x ^ 2 + y ^ 2', {'x': 3, 'y': 4}) == 25
+
+
+def test_nested_fn_call_with_variable():
+    assert _eval('cos(sin(x))', {'x': 0}) == 1.0
+
+
+def test_call_function_with_undefined_args():
+    with pytest.raises(EvaluationError):
+        _eval('log(0)', {'x': math.pi/2})
+
+
+def test_call_undefined_function():
+    with pytest.raises(EvaluationError):
+        _eval('sin(etan(x))')

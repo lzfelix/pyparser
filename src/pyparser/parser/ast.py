@@ -22,3 +22,9 @@ class BinaryNode(Node):
 @dataclass(frozen=True, slots=True)
 class TerminalNode(Node):
     expr: tokens.FloatToken | tokens.IntToken | tokens.StringToken
+
+
+@dataclass(frozen=True, slots=True)
+class FunctionCallNode(Node):
+    fn_name: tokens.StringToken
+    arg: Node

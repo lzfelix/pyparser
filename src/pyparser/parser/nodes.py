@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pyparser import tokens
+from pyparser.lexer import tokens
 
 
 class Node:

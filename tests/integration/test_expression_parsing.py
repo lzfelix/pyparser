@@ -1,7 +1,7 @@
-from pyparser import tokenizer
-from pyparser import parser
-from pyparser import nodes
-from pyparser import tokens
+from pyparser.lexer import tokenizer
+from pyparser.parser import parser
+from pyparser.parser import nodes
+from pyparser.lexer import tokens
 
 
 def test_parse_simple_expression():

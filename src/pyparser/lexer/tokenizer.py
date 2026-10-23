@@ -1,5 +1,5 @@
 import string
-from pyparser import tokens
+from pyparser.lexer import tokens
 
 
 _NUMBERS_ALPHABET = set(str(i) for i in range(10))

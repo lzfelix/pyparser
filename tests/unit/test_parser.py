@@ -1,6 +1,6 @@
-from pyparser import parser
-from pyparser import tokens
-from pyparser import nodes
+from pyparser.parser import parser
+from pyparser.lexer import tokens
+from pyparser.parser import nodes
 
 
 def _int(i: int, position: int) -> nodes.TerminalNode:

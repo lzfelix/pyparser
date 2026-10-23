@@ -1,5 +1,5 @@
 import pytest
-from pyparser import tokenizer
+from pyparser.lexer import tokenizer
 
 
 def tokenize_values(expression: str) -> list[str]:

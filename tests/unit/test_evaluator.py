@@ -1,28 +1,27 @@
 import pytest
 from pyparser.errors import EvaluationError
 from pyparser.evaluators import evaluator
-from pyparser.lexer import tokens
 from pyparser.parser import ast
 
 
 def _int(i: int) -> ast.NumberNode:
-    return ast.NumberNode(tokens.IntToken(i, 0))
+    return ast.NumberNode(i)
 
 
 def _float(f: float) -> ast.NumberNode:
-    return ast.NumberNode(tokens.FloatToken(f, 0))
+    return ast.NumberNode(f)
 
 
-def _var(name: str, position: int = 0) -> ast.VariableNode:
-    return ast.VariableNode(tokens.StringToken(name, position))
+def _var(name: str, position: int | None = None) -> ast.VariableNode:
+    return ast.VariableNode(name, position=position)
 
 
 def _unary(operator: str, expr: ast.Node) -> ast.UnaryNode:
-    return ast.UnaryNode(tokens.OperatorToken(operator, 0), expr)
+    return ast.UnaryNode(operator, expr)
 
 
 def _binary(left: ast.Node, operator: str, right: ast.Node) -> ast.BinaryNode:
-    return ast.BinaryNode(left, tokens.OperatorToken(operator, 0), right)
+    return ast.BinaryNode(left, operator, right)
 
 
 def test_int_number_evaluates_to_its_value():

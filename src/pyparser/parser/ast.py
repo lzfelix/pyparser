@@ -1,35 +1,44 @@
-from dataclasses import dataclass
-from pyparser.lexer import tokens
+from dataclasses import dataclass, field
 
 
 class Node:
     pass
 
 
+# Positions point back to the source expression for error messages. They are
+# excluded from equality so that trees compare by structure only, and are None
+# for nodes that don't come from the source (e.g. built by a transformation).
+
+
 @dataclass(frozen=True, slots=True)
 class UnaryNode(Node):
-    operator: tokens.OperatorToken
+    operator: str
     expr: Node
+    position: int | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
 class BinaryNode(Node):
-    l_expr: Node
-    operator: tokens.OperatorToken
-    r_expr: Node
+    left: Node
+    operator: str
+    right: Node
+    position: int | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
 class NumberNode(Node):
-    value: tokens.FloatToken | tokens.IntToken
+    value: int | float
+    position: int | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
 class VariableNode(Node):
-    name: tokens.StringToken
+    name: str
+    position: int | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
 class FunctionCallNode(Node):
-    fn_name: tokens.StringToken
+    name: str
     arg: Node
+    position: int | None = field(default=None, compare=False)

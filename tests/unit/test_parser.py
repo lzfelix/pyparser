@@ -5,16 +5,12 @@ from pyparser.lexer import tokens
 from pyparser.parser import ast
 
 
-def _int(i: int, position: int) -> ast.NumberNode:
-    return ast.NumberNode(
-        value=tokens.IntToken(i, position)
-    )
+def _int(i: int) -> ast.NumberNode:
+    return ast.NumberNode(i)
 
 
-def _float(f: float, position: int) -> ast.NumberNode:
-    return ast.NumberNode(
-        value=tokens.FloatToken(f, position)
-    )
+def _float(f: float) -> ast.NumberNode:
+    return ast.NumberNode(f)
 
 
 def test_simple_addition_expression():
@@ -26,9 +22,9 @@ def test_simple_addition_expression():
     ])
 
     expected = ast.BinaryNode(
-        _int(3, 0),
-        tokens.OperatorToken('+', 1),
-        _int(2, 2)
+        _int(3),
+        '+',
+        _int(2)
     )
 
     assert actual == expected
@@ -45,12 +41,12 @@ def test_multiplication_takes_precedence_over_addition():
     ])
 
     expected = ast.BinaryNode(
-        _int(3, 0),
-        tokens.OperatorToken('+', 1),
+        _int(3),
+        '+',
         ast.BinaryNode(
-            _int(2, 2),
-            tokens.OperatorToken('*', 3),
-            _int(5, 4),
+            _int(2),
+            '*',
+            _int(5),
         )
     )
 
@@ -74,16 +70,16 @@ def test_parens_expression():
     ])
 
     expected = ast.BinaryNode(
-        _int(7, 0),
-        tokens.OperatorToken('*', 1),
+        _int(7),
+        '*',
         ast.BinaryNode(
             ast.BinaryNode(
-                _int(5, 4),
-                tokens.OperatorToken('+', 5),
-                _int(10, 6),
+                _int(5),
+                '+',
+                _int(10),
             ),
-            tokens.OperatorToken('-', 8),
-            _int(3, 9)
+            '-',
+            _int(3)
         )
     )
 
@@ -98,8 +94,8 @@ def test_unary_operator():
     ])
 
     expected = ast.UnaryNode(
-        tokens.OperatorToken('-', 0),
-        _float(3.13, 1)
+        '-',
+        _float(3.13)
     )
 
     assert actual == expected
@@ -115,12 +111,12 @@ def test_successive_unary_operators():
     ])
 
     expected = ast.UnaryNode(
-        tokens.OperatorToken('-', 0),
+        '-',
         expr=ast.UnaryNode(
-            tokens.OperatorToken('+', 1),
+            '+',
             expr=ast.UnaryNode(
-                tokens.OperatorToken('-', 2),
-                _float(3.13, 3)
+                '-',
+                _float(3.13)
             )
         )
     )
@@ -139,11 +135,11 @@ def test_unary_with_parens():
     ])
 
     expected = ast.UnaryNode(
-        operator=tokens.OperatorToken('-', 0),
+        operator='-',
         expr=ast.BinaryNode(
-            _int(3, 2),
-            tokens.OperatorToken('+', 3),
-            _float(0.14, 4)
+            _int(3),
+            '+',
+            _float(0.14)
         )
     )
 
@@ -162,12 +158,12 @@ def test_subtraction_is_left_associative():
 
     expected = ast.BinaryNode(
         ast.BinaryNode(
-            _int(8, 0),
-            tokens.OperatorToken('-', 1),
-            _int(3, 2),
+            _int(8),
+            '-',
+            _int(3),
         ),
-        tokens.OperatorToken('-', 3),
-        _int(2, 4),
+        '-',
+        _int(2),
     )
 
     assert actual == expected
@@ -183,11 +179,11 @@ def test_unary_operator_as_multiplication_operand():
     ])
 
     expected = ast.BinaryNode(
-        _int(2, 0),
-        tokens.OperatorToken('*', 1),
+        _int(2),
+        '*',
         ast.UnaryNode(
-            tokens.OperatorToken('-', 2),
-            _int(3, 3),
+            '-',
+            _int(3),
         ),
     )
 
@@ -231,9 +227,9 @@ def test_power_expression():
     ])
 
     expected = ast.BinaryNode(
-        _int(2, 0),
-        tokens.OperatorToken('^', 1),
-        _int(3, 2),
+        _int(2),
+        '^',
+        _int(3),
     )
 
     assert actual == expected
@@ -250,12 +246,12 @@ def test_power_is_right_associative():
     ])
 
     expected = ast.BinaryNode(
-        _int(2, 0),
-        tokens.OperatorToken('^', 1),
+        _int(2),
+        '^',
         ast.BinaryNode(
-            _int(3, 2),
-            tokens.OperatorToken('^', 3),
-            _int(2, 4),
+            _int(3),
+            '^',
+            _int(2),
         ),
     )
 
@@ -273,12 +269,12 @@ def test_power_takes_precedence_over_multiplication():
     ])
 
     expected = ast.BinaryNode(
-        _int(2, 0),
-        tokens.OperatorToken('*', 1),
+        _int(2),
+        '*',
         ast.BinaryNode(
-            _int(3, 2),
-            tokens.OperatorToken('^', 3),
-            _int(2, 4),
+            _int(3),
+            '^',
+            _int(2),
         ),
     )
 
@@ -295,11 +291,11 @@ def test_unary_sign_applies_after_power():
     ])
 
     expected = ast.UnaryNode(
-        tokens.OperatorToken('-', 0),
+        '-',
         ast.BinaryNode(
-            _int(2, 1),
-            tokens.OperatorToken('^', 2),
-            _int(2, 3),
+            _int(2),
+            '^',
+            _int(2),
         ),
     )
 
@@ -316,11 +312,11 @@ def test_unary_sign_in_exponent():
     ])
 
     expected = ast.BinaryNode(
-        _int(2, 0),
-        tokens.OperatorToken('^', 1),
+        _int(2),
+        '^',
         ast.UnaryNode(
-            tokens.OperatorToken('-', 2),
-            _int(1, 3),
+            '-',
+            _int(1),
         ),
     )
 
@@ -341,12 +337,12 @@ def test_parens_override_power_associativity():
 
     expected = ast.BinaryNode(
         ast.BinaryNode(
-            _int(2, 1),
-            tokens.OperatorToken('^', 2),
-            _int(3, 3),
+            _int(2),
+            '^',
+            _int(3),
         ),
-        tokens.OperatorToken('^', 5),
-        _int(2, 6),
+        '^',
+        _int(2),
     )
 
     assert actual == expected
@@ -364,11 +360,11 @@ def test_parse_function_call():
     ])
 
     expected = ast.FunctionCallNode(
-        fn_name=tokens.StringToken('sin', 0),
+        name='sin',
         arg=ast.BinaryNode(
-            ast.VariableNode(tokens.StringToken('x', 2)),
-            tokens.OperatorToken('+', 3),
-            _int(2, 4)
+            ast.VariableNode('x'),
+            '+',
+            _int(2)
         )
     )
 
@@ -388,10 +384,10 @@ def test_parse_nested_function_call():
     ])
 
     expected = ast.FunctionCallNode(
-        fn_name=tokens.StringToken('cos', 0),
+        name='cos',
         arg=ast.FunctionCallNode(
-            fn_name=tokens.StringToken('tan', 2),
-            arg=ast.VariableNode(tokens.StringToken('x', 4))
+            name='tan',
+            arg=ast.VariableNode('x')
         )
     )
 
@@ -411,11 +407,11 @@ def test_function_call_followed_by_addition():
 
     expected = ast.BinaryNode(
         ast.FunctionCallNode(
-            fn_name=tokens.StringToken('sin', 0),
-            arg=ast.VariableNode(tokens.StringToken('x', 2)),
+            name='sin',
+            arg=ast.VariableNode('x'),
         ),
-        tokens.OperatorToken('+', 4),
-        _int(1, 5),
+        '+',
+        _int(1),
     )
 
     assert actual == expected
@@ -434,11 +430,11 @@ def test_function_call_raised_to_power():
 
     expected = ast.BinaryNode(
         ast.FunctionCallNode(
-            fn_name=tokens.StringToken('sin', 0),
-            arg=ast.VariableNode(tokens.StringToken('x', 2)),
+            name='sin',
+            arg=ast.VariableNode('x'),
         ),
-        tokens.OperatorToken('^', 4),
-        _int(2, 5),
+        '^',
+        _int(2),
     )
 
     assert actual == expected
@@ -455,10 +451,10 @@ def test_unary_sign_applies_to_function_call():
     ])
 
     expected = ast.UnaryNode(
-        tokens.OperatorToken('-', 0),
+        '-',
         ast.FunctionCallNode(
-            fn_name=tokens.StringToken('sin', 1),
-            arg=ast.VariableNode(tokens.StringToken('x', 3)),
+            name='sin',
+            arg=ast.VariableNode('x'),
         ),
     )
 
@@ -472,3 +468,22 @@ def test_incomplete_power_expression_should_raise():
             tokens.IntToken(2, 0),
             tokens.OperatorToken('^', 1),
         ])
+
+
+def test_nodes_keep_source_positions():
+    # 2 * -sin(x)
+    actual = parser.parse([
+        tokens.IntToken(2, 0),
+        tokens.OperatorToken('*', 1),
+        tokens.OperatorToken('-', 2),
+        tokens.StringToken('sin', 3),
+        tokens.OpenParensToken('(', 4),
+        tokens.StringToken('x', 5),
+        tokens.CloseParensToken(')', 6),
+    ])
+
+    assert actual.position == 1                     # '*'
+    assert actual.left.position == 0                # 2
+    assert actual.right.position == 2               # '-'
+    assert actual.right.expr.position == 3          # sin
+    assert actual.right.expr.arg.position == 5      # x

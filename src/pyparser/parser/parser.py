@@ -27,14 +27,14 @@ def _parse_primary(container: TokenContainer) -> ast.Node:
 
     match head:
         case tokens.IntToken() | tokens.FloatToken() as token:
-            return ast.NumberNode(value=token)
+            return ast.NumberNode(value=token.value, position=token.position)
         case tokens.StringToken() as token:
             if not container.is_exhausted() and isinstance(container.peek(), tokens.OpenParensToken):
                 container.next()  # Consume open parens
                 arg = _parse_parenthesized(container)
-                return ast.FunctionCallNode(fn_name=token, arg=arg)
+                return ast.FunctionCallNode(name=token.value, arg=arg, position=token.position)
             else:
-                return ast.VariableNode(name=token)
+                return ast.VariableNode(name=token.value, position=token.position)
         case tokens.OpenParensToken():
             return _parse_parenthesized(container)
         case _:
@@ -50,7 +50,7 @@ def _parse_power(container: TokenContainer) -> ast.Node:
         case tokens.OperatorToken(value='^'):
             operator = container.next()
             rhs = _parse_unary(container)
-            return ast.BinaryNode(lhs, operator, rhs)
+            return ast.BinaryNode(lhs, operator.value, rhs, position=operator.position)
         case _:
             return lhs
 
@@ -60,7 +60,7 @@ def _parse_unary(container: TokenContainer) -> ast.Node:
         case tokens.OperatorToken(value='+' | '-'):
             operator = container.next()
             expr = _parse_unary(container)
-            return ast.UnaryNode(operator=operator, expr=expr)
+            return ast.UnaryNode(operator=operator.value, expr=expr, position=operator.position)
         case _:
             return _parse_power(container)
 
@@ -72,7 +72,7 @@ def _parse_term(container: TokenContainer) -> ast.Node:
             case tokens.OperatorToken(value='*' | '/'):
                 operator = container.next()
                 right = _parse_unary(container)
-                left = ast.BinaryNode(left, operator, right)
+                left = ast.BinaryNode(left, operator.value, right, position=operator.position)
 
             case _:
                 break
@@ -88,7 +88,7 @@ def _parse_expression(container: TokenContainer) -> ast.Node:
             case tokens.OperatorToken(value='+' | '-'):
                 operator = container.next()
                 right = _parse_term(container)
-                left = ast.BinaryNode(left, operator, right)
+                left = ast.BinaryNode(left, operator.value, right, position=operator.position)
 
             case _:
                 break

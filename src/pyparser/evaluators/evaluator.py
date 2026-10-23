@@ -17,25 +17,24 @@ def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None)
     variables = variables or {}
 
     def _evaluate_unary(unary: ast.UnaryNode) -> int | float:
-        match unary.operator.value:
+        match unary.operator:
             case '+':
                 return _evaluate(unary.expr)
             case '-':
                 return -_evaluate(unary.expr)
             case _:
-                raise errors.EvaluationError(f'Unsupported unary operation "{unary.operator.value}"')
+                raise errors.EvaluationError(f'Unsupported unary operation "{unary.operator}"', position=unary.position)
 
     def _evaluate_variable(variable: ast.VariableNode) -> int | float:
-        name = variable.name.value
-        if name not in variables:
-            raise errors.EvaluationError(f'Undefined variable "{name}"', position=variable.name.position)
-        return variables[name]
+        if variable.name not in variables:
+            raise errors.EvaluationError(f'Undefined variable "{variable.name}"', position=variable.position)
+        return variables[variable.name]
 
     def _evaluate_binary(binary: ast.BinaryNode) -> int | float:
-        left = _evaluate(binary.l_expr)
-        right = _evaluate(binary.r_expr)
+        left = _evaluate(binary.left)
+        right = _evaluate(binary.right)
 
-        match binary.operator.value:
+        match binary.operator:
             case '+':
                 return left + right
             case '-':
@@ -47,26 +46,28 @@ def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None)
             case '^':
                 return left ** right
             case _:
-                raise errors.EvaluationError(f'Unsupported operation "{binary.operator.value}"')
+                raise errors.EvaluationError(f'Unsupported operation "{binary.operator}"', position=binary.position)
 
     def _evaluate_function(fn_call: ast.FunctionCallNode):
-        fn = _FUNCTIONS.get(fn_call.fn_name.value)
+        fn = _FUNCTIONS.get(fn_call.name)
         if not fn:
-            raise errors.EvaluationError(f'Unknown function "{fn_call.fn_name}".')
+            raise errors.EvaluationError(f'Unknown function "{fn_call.name}".', position=fn_call.position)
 
         fn_arg = _evaluate(fn_call.arg)
         try:
             return fn(fn_arg)
         except Exception as e:
-            fn_name = fn_call.fn_name.value
-            raise errors.EvaluationError(f'Failed to evaluate "{fn_name}({fn_arg})" with error "{e}".')
+            raise errors.EvaluationError(
+                f'Failed to evaluate "{fn_call.name}({fn_arg})" with error "{e}".',
+                position=fn_call.position,
+            )
 
     def _evaluate(node: ast.Node) -> int | float:
         match node:
             case ast.UnaryNode() as unary:
                 return _evaluate_unary(unary)
             case ast.NumberNode() as number:
-                return number.value.value
+                return number.value
             case ast.VariableNode() as variable:
                 return _evaluate_variable(variable)
             case ast.BinaryNode() as binary:

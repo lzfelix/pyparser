@@ -4,7 +4,6 @@ from pyparser.errors import ParserError, TokenizerError
 from pyparser.lexer import tokenizer
 from pyparser.parser import parser
 from pyparser.parser import ast
-from pyparser.lexer import tokens
 
 
 def test_parse_simple_expression():
@@ -12,12 +11,12 @@ def test_parse_simple_expression():
 
     expected = ast.BinaryNode(
         ast.BinaryNode(
-            ast.NumberNode(tokens.IntToken(3, 0)),
-            tokens.OperatorToken('+', 1),
-            ast.NumberNode(tokens.IntToken(2, 2)),
+            ast.NumberNode(3),
+            '+',
+            ast.NumberNode(2),
         ),
-        tokens.OperatorToken('-', 3),
-        ast.NumberNode(tokens.IntToken(5, 4))
+        '-',
+        ast.NumberNode(5)
     )
 
     assert actual == expected
@@ -29,14 +28,14 @@ def test_subtraction_with_unary_operator():
 
     expected = ast.BinaryNode(
         ast.BinaryNode(
-            ast.NumberNode(tokens.IntToken(3, 0)),
-            tokens.OperatorToken("/", 1),
-            ast.NumberNode(tokens.IntToken(3, 2)),
+            ast.NumberNode(3),
+            '/',
+            ast.NumberNode(3),
         ),
-        tokens.OperatorToken("/", 3),
+        '/',
         ast.UnaryNode(
-            tokens.OperatorToken("-", 4),
-            ast.NumberNode(tokens.IntToken(3, 5)),
+            '-',
+            ast.NumberNode(3),
         ),
     )
 

@@ -1,17 +1,9 @@
-import math
 import numbers
 from collections.abc import Mapping, Sequence
 
 from pyparser import errors
+from pyparser.functions import BUILTINS
 from pyparser.parser import ast
-
-
-_FUNCTIONS = {
-    'sin': math.sin,
-    'cos': math.cos,
-    'tan': math.tan,
-    'log': math.log
-}
 
 
 type Value = int | float | Sequence[int | float]
@@ -77,13 +69,13 @@ def evaluate(root: ast.Node, variables: Mapping[str, Value] | None = None) -> in
                 raise errors.EvaluationError(f'Unsupported operation "{binary.operator}"', position=binary.position)
 
     def _evaluate_function(fn_call: ast.FunctionCallNode):
-        fn = _FUNCTIONS.get(fn_call.name)
+        fn = BUILTINS.get(fn_call.name)
         if not fn:
             raise errors.EvaluationError(f'Unknown function "{fn_call.name}".', position=fn_call.position)
 
         fn_arg = _evaluate(fn_call.arg)
         try:
-            return fn(fn_arg)
+            return fn.implementation(fn_arg)
         except Exception as e:
             raise errors.EvaluationError(
                 f'Failed to evaluate "{fn_call.name}({fn_arg})" with error "{e}".',

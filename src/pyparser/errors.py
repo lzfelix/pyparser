@@ -11,3 +11,7 @@ class TokenizerError(PyParserError):
 
 class ParserError(PyParserError):
     pass
+
+
+class EvaluationError(PyParserError):
+    pass

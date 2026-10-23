@@ -15,6 +15,7 @@ Expressions go through three stages:
 | Integers       | `42`            | `42`             | `42`    |
 | Decimals       | `3.14`          | `3.14 * 2`       | `6.28`  |
 | Variables      | `x`, `long_name`| `2 * x` (x = 3)  | `6`     |
+| Indexed variables | `x[i]`       | `x[0] + x[1]` (x = [1, 2]) | `3` |
 | Addition       | `a + b`         | `3 + 2`          | `5`     |
 | Subtraction    | `a - b`         | `3 - 5`          | `-2`    |
 | Multiplication | `a * b`         | `3 * 4`          | `12`    |
@@ -29,6 +30,7 @@ Expressions go through three stages:
 - A leading sign applies after the power, as in Python: `-2 ^ 2` is `-4`, while `(-2) ^ 2` is `4`.
 - Division always returns a float; dividing by zero raises `ZeroDivisionError`.
 - Variable names use letters and `_`, and are case-sensitive.
+- Indexed variables take a single non-negative integer literal as index (`x[0]`); expressions, variables, negative numbers and multiple indices (`x[i]`, `x[-1]`, `x[0][1]`) are rejected by the parser.
 - Whitespace is ignored.
 
 ### Functions
@@ -49,7 +51,7 @@ expr    := term (('+' | '-') term)*
 term    := unary (('*' | '/') unary)*
 unary   := ('+' | '-') unary | power
 power   := primary ('^' unary)?
-primary := NUMBER | VARIABLE | FUN_NAME '(' expr ')' | '(' expr ')'
+primary := NUMBER | VARIABLE | VARIABLE '[' INT ']' | FUN_NAME '(' expr ')' | '(' expr ')'
 ```
 
 ## Usage
@@ -68,6 +70,13 @@ evaluator.evaluate(tree, {'x': 1, 'y': 0})    # 2, same tree, new values
 Variables are only bound at evaluation time, so a parsed tree can be evaluated any number of times with different values.
 Expressions without variables can omit the mapping: `evaluator.evaluate(tree)`.
 
+Indexed variables are bound to a sequence of numbers:
+
+```python
+tree = parser.parse(tokenizer.tokenize('x[0] * x[1] + y'))
+evaluator.evaluate(tree, {'x': [2, 3], 'y': 1})  # 7
+```
+
 ## Errors
 
 All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, when known, the `position` in the input:
@@ -76,7 +85,7 @@ All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, 
 |-------------------|-------------|
 | `TokenizerError`  | Invalid character, malformed number (`3.`, `1.2.3`), or empty input |
 | `ParserError`     | Unexpected token, unclosed parenthesis, or incomplete expression |
-| `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), or an unsupported operator or AST node |
+| `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), an index out of range, indexing a single value or using a sequence without an index, or an unsupported operator or AST node |
 
 ## Development
 

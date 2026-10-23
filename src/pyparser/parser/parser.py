@@ -9,7 +9,7 @@ from pyparser.parser.token_container import TokenContainer
     term    := unary (('*' | '/') unary)*
     unary   := ('+' | '-') unary | power
     power   := primary ('^' unary)?
-    primary := NUMBER | VARIABLE | FUN_NAME '(' expr ')' | '(' expr ')'
+    primary := NUMBER | VARIABLE | VARIABLE '[' INT ']' | FUN_NAME '(' expr ')' | '(' expr ')'
 """
 
 
@@ -22,6 +22,19 @@ def _parse_parenthesized(container: TokenContainer) -> ast.Node:
     return expr_node
 
 
+def _parse_indexed_variable(name: tokens.StringToken, container: TokenContainer) -> ast.Node:
+    # Parses `INT ']'`, the opening bracket must have already been consumed
+    index = container.next()
+    if not isinstance(index, tokens.IntToken):
+        raise ParserError(f'Expected an integer index but "{index}" found.', position=index.position)
+
+    closing = container.next()
+    if not isinstance(closing, tokens.CloseBracketToken):
+        raise ParserError(f'Expected token "]" but "{closing}" found.', position=closing.position)
+
+    return ast.IndexedVariableNode(name=name.value, index=index.value, position=name.position)
+
+
 def _parse_primary(container: TokenContainer) -> ast.Node:
     head = container.next()
 
@@ -29,12 +42,19 @@ def _parse_primary(container: TokenContainer) -> ast.Node:
         case tokens.IntToken() | tokens.FloatToken() as token:
             return ast.NumberNode(value=token.value, position=token.position)
         case tokens.StringToken() as token:
-            if not container.is_exhausted() and isinstance(container.peek(), tokens.OpenParensToken):
-                container.next()  # Consume open parens
-                arg = _parse_parenthesized(container)
-                return ast.FunctionCallNode(name=token.value, arg=arg, position=token.position)
-            else:
+            if container.is_exhausted():
                 return ast.VariableNode(name=token.value, position=token.position)
+
+            match container.peek():
+                case tokens.OpenParensToken():
+                    container.next()  # Consume open parens
+                    arg = _parse_parenthesized(container)
+                    return ast.FunctionCallNode(name=token.value, arg=arg, position=token.position)
+                case tokens.OpenBracketToken():
+                    container.next()  # Consume open bracket
+                    return _parse_indexed_variable(token, container)
+                case _:
+                    return ast.VariableNode(name=token.value, position=token.position)
         case tokens.OpenParensToken():
             return _parse_parenthesized(container)
         case _:

@@ -487,3 +487,95 @@ def test_nodes_keep_source_positions():
     assert actual.right.position == 2               # '-'
     assert actual.right.expr.position == 3          # sin
     assert actual.right.expr.arg.position == 5      # x
+
+
+def test_parse_indexed_variable():
+    # x[2]
+    actual = parser.parse([
+        tokens.StringToken('x', 0),
+        tokens.OpenBracketToken('[', 1),
+        tokens.IntToken(2, 2),
+        tokens.CloseBracketToken(']', 3),
+    ])
+
+    assert actual == ast.IndexedVariableNode('x', 2)
+    assert actual.position == 0
+
+
+def test_indexed_variable_inside_expression():
+    # x[0] + x[1] * 2 -> x[0] + (x[1] * 2)
+    actual = parser.parse([
+        tokens.StringToken('x', 0),
+        tokens.OpenBracketToken('[', 1),
+        tokens.IntToken(0, 2),
+        tokens.CloseBracketToken(']', 3),
+        tokens.OperatorToken('+', 4),
+        tokens.StringToken('x', 5),
+        tokens.OpenBracketToken('[', 6),
+        tokens.IntToken(1, 7),
+        tokens.CloseBracketToken(']', 8),
+        tokens.OperatorToken('*', 9),
+        tokens.IntToken(2, 10),
+    ])
+
+    expected = ast.BinaryNode(
+        ast.IndexedVariableNode('x', 0),
+        '+',
+        ast.BinaryNode(
+            ast.IndexedVariableNode('x', 1),
+            '*',
+            _int(2),
+        ),
+    )
+
+    assert actual == expected
+
+
+def test_indexed_variable_raised_to_power():
+    # x[1] ^ 2 -> (x[1]) ^ 2
+    actual = parser.parse([
+        tokens.StringToken('x', 0),
+        tokens.OpenBracketToken('[', 1),
+        tokens.IntToken(1, 2),
+        tokens.CloseBracketToken(']', 3),
+        tokens.OperatorToken('^', 4),
+        tokens.IntToken(2, 5),
+    ])
+
+    expected = ast.BinaryNode(ast.IndexedVariableNode('x', 1), '^', _int(2))
+
+    assert actual == expected
+
+
+def test_indexed_variable_as_function_argument():
+    # sin(x[0])
+    actual = parser.parse([
+        tokens.StringToken('sin', 0),
+        tokens.OpenParensToken('(', 1),
+        tokens.StringToken('x', 2),
+        tokens.OpenBracketToken('[', 3),
+        tokens.IntToken(0, 4),
+        tokens.CloseBracketToken(']', 5),
+        tokens.CloseParensToken(')', 6),
+    ])
+
+    expected = ast.FunctionCallNode(name='sin', arg=ast.IndexedVariableNode('x', 0))
+
+    assert actual == expected
+
+
+def test_indexed_and_plain_variables_are_different():
+    assert ast.IndexedVariableNode('x', 0) != ast.VariableNode('x')
+    assert ast.IndexedVariableNode('x', 0) != ast.IndexedVariableNode('x', 1)
+
+
+def test_non_integer_index_should_raise():
+    # x[1.5]
+    with pytest.raises(ParserError) as exc_info:
+        parser.parse([
+            tokens.StringToken('x', 0),
+            tokens.OpenBracketToken('[', 1),
+            tokens.FloatToken(1.5, 2),
+            tokens.CloseBracketToken(']', 5),
+        ])
+    assert exc_info.value.position == 2

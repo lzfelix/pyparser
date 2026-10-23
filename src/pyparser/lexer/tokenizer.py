@@ -1,4 +1,5 @@
 import string
+from pyparser.errors import TokenizerError
 from pyparser.lexer import tokens
 
 
@@ -19,16 +20,16 @@ def _parse_number(expr: str, idx: int) -> (int, tokens.FloatToken | tokens.IntTo
     while idx < expr_len and (expr[idx] in _NUMBERS_ALPHABET or expr[idx] == '.'):
         if expr[idx] == '.':
             if found_dot:
-                raise ValueError(f'Numbers must contain a single dot in {"".join(current_token)}.')
+                raise TokenizerError(f'Numbers must contain a single dot in {"".join(current_token)}.', position=idx)
             elif idx == start_idx:
-                raise ValueError(f'Numbers cannot start with leading dot in {"".join(current_token)}.')
+                raise TokenizerError(f'Numbers cannot start with leading dot in {"".join(current_token)}.', position=idx)
             else:
                 found_dot = True
         current_token.append(expr[idx])
         idx += 1
 
     if current_token and current_token[-1] == '.':
-        raise ValueError(f'Numbers cannot end with trailing dot in {"".join(current_token)}')
+        raise TokenizerError(f'Numbers cannot end with trailing dot in {"".join(current_token)}', position=idx - 1)
 
     number_as_str = ''.join(current_token)
     if found_dot:
@@ -79,9 +80,9 @@ def tokenize(expr: str) -> list[tokens.Token]:
             parsed_tokens.append(tokens.OperatorToken(position=idx, value=current_char))
             idx += 1
         else:
-            raise ValueError('Unexpected token')
+            raise TokenizerError(f'Unexpected character "{current_char}" at position {idx}.', position=idx)
 
     if not parsed_tokens:
-        raise ValueError('Empty expression')
+        raise TokenizerError('Empty expression')
 
     return parsed_tokens

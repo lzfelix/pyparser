@@ -1,4 +1,5 @@
 import pytest
+from pyparser.errors import TokenizerError
 from pyparser.lexer import tokenizer
 
 
@@ -23,17 +24,17 @@ def test_single_positive_decimal_number_is_valid():
 
 
 def test_decimals_should_contain_at_most_one_dot():
-    with pytest.raises(ValueError):
+    with pytest.raises(TokenizerError):
         tokenize_values('3.14.15')
 
 
 def test_decimal_should_not_start_with_leading_dot():
-    with pytest.raises(ValueError):
+    with pytest.raises(TokenizerError):
         tokenize_values('.14')
 
 
 def test_decimal_should_not_finish_with_trailing_dot():
-    with pytest.raises(ValueError):
+    with pytest.raises(TokenizerError):
         tokenize_values('3.')
 
 
@@ -61,7 +62,7 @@ def test_mixed_positive_negative_decimal_expression():
 
 
 def test_empty_expression_should_raise():
-    with pytest.raises(ValueError):
+    with pytest.raises(TokenizerError):
         tokenize_values('')
 
 

@@ -1,3 +1,5 @@
+import pytest
+from pyparser.errors import ParserError
 from pyparser.parser import parser
 from pyparser.lexer import tokens
 from pyparser.parser import ast
@@ -190,3 +192,31 @@ def test_unary_operator_as_multiplication_operand():
     )
 
     assert actual == expected
+
+
+def test_incomplete_binary_expression_should_raise():
+    # 3 +
+    with pytest.raises(ParserError):
+        parser.parse([
+            tokens.IntToken(3, 0),
+            tokens.OperatorToken('+', 1),
+        ])
+
+
+def test_unclosed_parens_should_raise():
+    # (3
+    with pytest.raises(ParserError):
+        parser.parse([
+            tokens.OpenParensToken('(', 0),
+            tokens.IntToken(3, 1),
+        ])
+
+
+def test_unexpected_close_parens_should_raise():
+    # 3)
+    with pytest.raises(ParserError) as exc_info:
+        parser.parse([
+            tokens.IntToken(3, 0),
+            tokens.CloseParensToken(')', 1),
+        ])
+    assert exc_info.value.position == 1

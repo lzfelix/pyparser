@@ -1,16 +1,16 @@
 from pyparser.parser import parser
 from pyparser.lexer import tokens
-from pyparser.parser import nodes
+from pyparser.parser import ast
 
 
-def _int(i: int, position: int) -> nodes.TerminalNode:
-    return nodes.TerminalNode(
+def _int(i: int, position: int) -> ast.TerminalNode:
+    return ast.TerminalNode(
         expr=tokens.IntToken(i, position)
     )
 
 
-def _float(f: float, position: int) -> nodes.TerminalNode:
-    return nodes.TerminalNode(
+def _float(f: float, position: int) -> ast.TerminalNode:
+    return ast.TerminalNode(
         expr=tokens.FloatToken(f, position)
     )
 
@@ -23,7 +23,7 @@ def test_simple_addition_expression():
         tokens.IntToken(2, 2)
     ])
 
-    expected = nodes.BinaryNode(
+    expected = ast.BinaryNode(
         _int(3, 0),
         tokens.OperatorToken('+', 1),
         _int(2, 2)
@@ -42,10 +42,10 @@ def test_multiplication_takes_precedence_over_addition():
         tokens.IntToken(5, 4)
     ])
 
-    expected = nodes.BinaryNode(
+    expected = ast.BinaryNode(
         _int(3, 0),
         tokens.OperatorToken('+', 1),
-        nodes.BinaryNode(
+        ast.BinaryNode(
             _int(2, 2),
             tokens.OperatorToken('*', 3),
             _int(5, 4),
@@ -71,11 +71,11 @@ def test_parens_expression():
         tokens.CloseParensToken(')', 9)
     ])
 
-    expected = nodes.BinaryNode(
+    expected = ast.BinaryNode(
         _int(7, 0),
         tokens.OperatorToken('*', 1),
-        nodes.BinaryNode(
-            nodes.BinaryNode(
+        ast.BinaryNode(
+            ast.BinaryNode(
                 _int(5, 4),
                 tokens.OperatorToken('+', 5),
                 _int(10, 6),
@@ -95,7 +95,7 @@ def test_unary_operator():
         tokens.FloatToken(3.13, 1)
     ])
 
-    expected = nodes.UnaryNode(
+    expected = ast.UnaryNode(
         tokens.OperatorToken('-', 0),
         _float(3.13, 1)
     )
@@ -112,11 +112,11 @@ def test_successive_unary_operators():
         tokens.FloatToken(3.13, 3)
     ])
 
-    expected = nodes.UnaryNode(
+    expected = ast.UnaryNode(
         tokens.OperatorToken('-', 0),
-        expr=nodes.UnaryNode(
+        expr=ast.UnaryNode(
             tokens.OperatorToken('+', 1),
-            expr=nodes.UnaryNode(
+            expr=ast.UnaryNode(
                 tokens.OperatorToken('-', 2),
                 _float(3.13, 3)
             )
@@ -136,9 +136,9 @@ def test_unary_with_parens():
         tokens.CloseParensToken(')', 5)
     ])
 
-    expected = nodes.UnaryNode(
+    expected = ast.UnaryNode(
         operator=tokens.OperatorToken('-', 0),
-        expr=nodes.BinaryNode(
+        expr=ast.BinaryNode(
             _int(3, 2),
             tokens.OperatorToken('+', 3),
             _float(0.14, 4)
@@ -158,8 +158,8 @@ def test_subtraction_is_left_associative():
         tokens.IntToken(2, 4),
     ])
 
-    expected = nodes.BinaryNode(
-        nodes.BinaryNode(
+    expected = ast.BinaryNode(
+        ast.BinaryNode(
             _int(8, 0),
             tokens.OperatorToken('-', 1),
             _int(3, 2),
@@ -180,10 +180,10 @@ def test_unary_operator_as_multiplication_operand():
         tokens.IntToken(3, 3),
     ])
 
-    expected = nodes.BinaryNode(
+    expected = ast.BinaryNode(
         _int(2, 0),
         tokens.OperatorToken('*', 1),
-        nodes.UnaryNode(
+        ast.UnaryNode(
             tokens.OperatorToken('-', 2),
             _int(3, 3),
         ),

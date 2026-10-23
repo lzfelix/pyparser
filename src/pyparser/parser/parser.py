@@ -1,5 +1,5 @@
 from pyparser.lexer import tokens
-from pyparser.parser import nodes
+from pyparser.parser import ast
 
 """
     Grammar
@@ -9,12 +9,12 @@ from pyparser.parser import nodes
     primary := NUMBER | VARIABLE | '(' expr ')'
 """
 
-def _parse_primary(expression: list[tokens.Token], idx: int) -> tuple[nodes.Node, int]:
+def _parse_primary(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
     head = expression[idx]
 
     match head:
         case tokens.IntToken() | tokens.FloatToken() | tokens.StringToken() as token:
-            return nodes.TerminalNode(expr=token), idx + 1
+            return ast.TerminalNode(expr=token), idx + 1
         case tokens.OpenParensToken():
             expr_node, idx = _parse_expression(expression, idx + 1)
             if not isinstance(expression[idx], tokens.CloseParensToken):
@@ -24,17 +24,17 @@ def _parse_primary(expression: list[tokens.Token], idx: int) -> tuple[nodes.Node
             raise ValueError(f'Unexpected token of type {type(head)} at position {head.position}.')
 
 
-def _parse_unary(expression: list[tokens.Token], idx: int) -> tuple[nodes.Node, int]:
+def _parse_unary(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
     match expression[idx]:
         case tokens.OperatorToken(value='+' | '-'):
             operator = expression[idx]
             expr, idx = _parse_unary(expression, idx + 1)
-            return nodes.UnaryNode(operator=operator, expr=expr), idx
+            return ast.UnaryNode(operator=operator, expr=expr), idx
         case _:
             return _parse_primary(expression, idx)
 
 
-def _parse_term(expression: list[tokens.Token], idx: int) -> tuple[nodes.Node, int]:
+def _parse_term(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
     left, idx = _parse_unary(expression, idx)
     while idx < len(expression):
         match expression[idx]:
@@ -43,7 +43,7 @@ def _parse_term(expression: list[tokens.Token], idx: int) -> tuple[nodes.Node, i
 
                 idx += 1
                 right, idx = _parse_unary(expression, idx)
-                left = nodes.BinaryNode(left, operator, right)
+                left = ast.BinaryNode(left, operator, right)
 
             case _:
                 break
@@ -51,7 +51,7 @@ def _parse_term(expression: list[tokens.Token], idx: int) -> tuple[nodes.Node, i
     return left, idx
 
 
-def _parse_expression(expression: list[tokens.Token], idx: int) -> tuple[nodes.Node, int]:
+def _parse_expression(expression: list[tokens.Token], idx: int) -> tuple[ast.Node, int]:
     left, idx = _parse_term(expression, idx)
 
     while idx < len(expression):
@@ -61,14 +61,14 @@ def _parse_expression(expression: list[tokens.Token], idx: int) -> tuple[nodes.N
 
                 idx += 1
                 right, idx = _parse_term(expression, idx)
-                left = nodes.BinaryNode(left, operator, right)
+                left = ast.BinaryNode(left, operator, right)
 
             case _:
                 break
     return left, idx
 
 
-def parse(expression: list[tokens.Token]) -> nodes.Node:
+def parse(expression: list[tokens.Token]) -> ast.Node:
     node, idx = _parse_expression(expression, idx=0)
     if idx != len(expression):
         raise SyntaxError(f'Unexpected token "{expression[idx]}"')

@@ -1,4 +1,4 @@
-from pyparser.parser.nodes import BinaryNode, Node, TerminalNode, UnaryNode
+from pyparser.parser.ast import BinaryNode, Node, TerminalNode, UnaryNode
 from pyparser.parser.parser import parse
 
 __all__ = [

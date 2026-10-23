@@ -220,3 +220,142 @@ def test_unexpected_close_parens_should_raise():
             tokens.CloseParensToken(')', 1),
         ])
     assert exc_info.value.position == 1
+
+
+def test_power_expression():
+    # 2 ^ 3
+    actual = parser.parse([
+        tokens.IntToken(2, 0),
+        tokens.OperatorToken('^', 1),
+        tokens.IntToken(3, 2),
+    ])
+
+    expected = ast.BinaryNode(
+        _int(2, 0),
+        tokens.OperatorToken('^', 1),
+        _int(3, 2),
+    )
+
+    assert actual == expected
+
+
+def test_power_is_right_associative():
+    # 2 ^ 3 ^ 2 -> 2 ^ (3 ^ 2)
+    actual = parser.parse([
+        tokens.IntToken(2, 0),
+        tokens.OperatorToken('^', 1),
+        tokens.IntToken(3, 2),
+        tokens.OperatorToken('^', 3),
+        tokens.IntToken(2, 4),
+    ])
+
+    expected = ast.BinaryNode(
+        _int(2, 0),
+        tokens.OperatorToken('^', 1),
+        ast.BinaryNode(
+            _int(3, 2),
+            tokens.OperatorToken('^', 3),
+            _int(2, 4),
+        ),
+    )
+
+    assert actual == expected
+
+
+def test_power_takes_precedence_over_multiplication():
+    # 2 * 3 ^ 2 -> 2 * (3 ^ 2)
+    actual = parser.parse([
+        tokens.IntToken(2, 0),
+        tokens.OperatorToken('*', 1),
+        tokens.IntToken(3, 2),
+        tokens.OperatorToken('^', 3),
+        tokens.IntToken(2, 4),
+    ])
+
+    expected = ast.BinaryNode(
+        _int(2, 0),
+        tokens.OperatorToken('*', 1),
+        ast.BinaryNode(
+            _int(3, 2),
+            tokens.OperatorToken('^', 3),
+            _int(2, 4),
+        ),
+    )
+
+    assert actual == expected
+
+
+def test_unary_sign_applies_after_power():
+    # -2 ^ 2 -> -(2 ^ 2)
+    actual = parser.parse([
+        tokens.OperatorToken('-', 0),
+        tokens.IntToken(2, 1),
+        tokens.OperatorToken('^', 2),
+        tokens.IntToken(2, 3),
+    ])
+
+    expected = ast.UnaryNode(
+        tokens.OperatorToken('-', 0),
+        ast.BinaryNode(
+            _int(2, 1),
+            tokens.OperatorToken('^', 2),
+            _int(2, 3),
+        ),
+    )
+
+    assert actual == expected
+
+
+def test_unary_sign_in_exponent():
+    # 2 ^ -1 -> 2 ^ (-1)
+    actual = parser.parse([
+        tokens.IntToken(2, 0),
+        tokens.OperatorToken('^', 1),
+        tokens.OperatorToken('-', 2),
+        tokens.IntToken(1, 3),
+    ])
+
+    expected = ast.BinaryNode(
+        _int(2, 0),
+        tokens.OperatorToken('^', 1),
+        ast.UnaryNode(
+            tokens.OperatorToken('-', 2),
+            _int(1, 3),
+        ),
+    )
+
+    assert actual == expected
+
+
+def test_parens_override_power_associativity():
+    # (2 ^ 3) ^ 2
+    actual = parser.parse([
+        tokens.OpenParensToken('(', 0),
+        tokens.IntToken(2, 1),
+        tokens.OperatorToken('^', 2),
+        tokens.IntToken(3, 3),
+        tokens.CloseParensToken(')', 4),
+        tokens.OperatorToken('^', 5),
+        tokens.IntToken(2, 6),
+    ])
+
+    expected = ast.BinaryNode(
+        ast.BinaryNode(
+            _int(2, 1),
+            tokens.OperatorToken('^', 2),
+            _int(3, 3),
+        ),
+        tokens.OperatorToken('^', 5),
+        _int(2, 6),
+    )
+
+    assert actual == expected
+
+
+def test_incomplete_power_expression_should_raise():
+    # 2 ^
+    with pytest.raises(ParserError):
+        parser.parse([
+            tokens.IntToken(2, 0),
+            tokens.OperatorToken('^', 1),
+        ])

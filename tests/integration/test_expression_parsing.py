@@ -63,7 +63,9 @@ def test_subtraction_with_unary_operator():
         pytest.param('()', ParserError, id='empty-parens'),
         pytest.param('3 (2)', ParserError, id='implicit-multiplication'),
         pytest.param('12 34', ParserError, id='adjacent-numbers'),
-        pytest.param('2 ^ 3', ParserError, id='unsupported-operator'),
+        pytest.param('2 ^', ParserError, id='missing-exponent'),
+        pytest.param('^ 2', ParserError, id='missing-base'),
+        pytest.param('2 ^ ^ 3', ParserError, id='repeated-power-operator'),
     ],
 )
 def test_malformed_expression_should_raise(expression: str, expected_error: type[Exception]):

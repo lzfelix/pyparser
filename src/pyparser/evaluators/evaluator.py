@@ -39,6 +39,8 @@ def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None)
                 return left * right
             case '/':
                 return left / right  # Delegating division by zero to Python
+            case '^':
+                return left ** right
             case _:
                 raise errors.EvaluationError(f'Unsupported operation "{binary.operator.value}"')
 

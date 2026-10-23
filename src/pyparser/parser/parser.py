@@ -7,7 +7,8 @@ from pyparser.parser.token_container import TokenContainer
     Grammar
     expr    := term (('+'| '-') term)*
     term    := unary (('*' | '/') unary)*
-    unary   := ('+' | '-') unary | primary
+    unary   := ('+' | '-') unary | power
+    power   := primary ('^' unary)?
     primary := NUMBER | VARIABLE | '(' expr ')'
 """
 
@@ -28,6 +29,20 @@ def _parse_primary(container: TokenContainer) -> ast.Node:
             raise ParserError(f'Unexpected token of type {type(head)} at position {head.position}.', position=head.position)
 
 
+def _parse_power(container: TokenContainer) -> ast.Node:
+    lhs = _parse_primary(container)
+    if container.is_exhausted():
+        return lhs
+
+    match container.peek():
+        case tokens.OperatorToken(value='^'):
+            operator = container.next()
+            rhs = _parse_unary(container)
+            return ast.BinaryNode(lhs, operator, rhs)
+        case _:
+            return lhs
+
+
 def _parse_unary(container: TokenContainer) -> ast.Node:
     match container.peek():
         case tokens.OperatorToken(value='+' | '-'):
@@ -35,7 +50,7 @@ def _parse_unary(container: TokenContainer) -> ast.Node:
             expr = _parse_unary(container)
             return ast.UnaryNode(operator=operator, expr=expr)
         case _:
-            return _parse_primary(container)
+            return _parse_power(container)
 
 
 def _parse_term(container: TokenContainer) -> ast.Node:

@@ -69,3 +69,26 @@ def test_undefined_variable_reports_its_position():
     with pytest.raises(EvaluationError) as exc_info:
         _eval('2 * x + y', {'x': 3})
     assert exc_info.value.position == 8
+
+
+@pytest.mark.parametrize(
+    ('expression', 'expected'),
+    [
+        pytest.param('2 ^ 3', 8, id='simple'),
+        pytest.param('2 ^ 3 ^ 2', 512, id='right-associative'),
+        pytest.param('(2 ^ 3) ^ 2', 64, id='parens-override-associativity'),
+        pytest.param('2 ^ 3 + 1', 9, id='binds-tighter-than-addition'),
+        pytest.param('2 * 3 ^ 2', 18, id='binds-tighter-than-multiplication'),
+        pytest.param('-2 ^ 2', -4, id='unary-sign-applies-after-power'),
+        pytest.param('(-2) ^ 2', 4, id='parenthesized-negative-base'),
+        pytest.param('2 ^ -1', 0.5, id='negative-exponent'),
+        pytest.param('4 ^ 0.5', 2.0, id='fractional-exponent'),
+        pytest.param('2 ^ (1 + 2)', 8, id='expression-exponent'),
+    ],
+)
+def test_power(expression: str, expected: int | float):
+    assert _eval(expression) == pytest.approx(expected)
+
+
+def test_power_with_variables():
+    assert _eval('x ^ 2 + y ^ 2', {'x': 3, 'y': 4}) == 25

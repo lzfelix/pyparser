@@ -100,7 +100,7 @@ def test_unknown_node_raises():
 
 def test_unsupported_binary_operator_raises():
     with pytest.raises(EvaluationError):
-        evaluator.evaluate(_binary(_int(2), '^', _int(3)))
+        evaluator.evaluate(_binary(_int(2), '?', _int(3)))
 
 
 def test_unsupported_unary_operator_raises():
@@ -154,3 +154,34 @@ def test_undefined_variable_error_has_position():
 def test_variable_names_are_case_sensitive():
     with pytest.raises(EvaluationError):
         evaluator.evaluate(_var('X'), {'x': 1})
+
+
+def test_power():
+    assert evaluator.evaluate(_binary(_int(2), '^', _int(3))) == 8
+
+
+def test_power_of_zero_exponent_is_one():
+    assert evaluator.evaluate(_binary(_int(5), '^', _int(0))) == 1
+
+
+def test_power_with_negative_exponent():
+    assert evaluator.evaluate(_binary(_int(2), '^', _unary('-', _int(1)))) == 0.5
+
+
+def test_power_with_fractional_exponent():
+    assert evaluator.evaluate(_binary(_int(9), '^', _float(0.5))) == 3.0
+
+
+def test_nested_power_follows_tree_structure():
+    # 2 ^ (3 ^ 2)
+    right_assoc = _binary(_int(2), '^', _binary(_int(3), '^', _int(2)))
+    # (2 ^ 3) ^ 2
+    left_assoc = _binary(_binary(_int(2), '^', _int(3)), '^', _int(2))
+
+    assert evaluator.evaluate(right_assoc) == 512
+    assert evaluator.evaluate(left_assoc) == 64
+
+
+def test_power_with_variables():
+    # x ^ n
+    assert evaluator.evaluate(_binary(_var('x'), '^', _var('n')), {'x': 3, 'n': 2}) == 9

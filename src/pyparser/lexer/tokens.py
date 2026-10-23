@@ -38,3 +38,13 @@ class OpenParensToken(Token[str]):
 @dataclass(frozen=True, slots=True)
 class CloseParensToken(Token[str]):
     pass
+
+
+@dataclass(frozen=True, slots=True)
+class OpenBracketToken(Token[str]):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class CloseBracketToken(Token[str]):
+    pass

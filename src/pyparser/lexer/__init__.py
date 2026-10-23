@@ -1,8 +1,10 @@
 from pyparser.lexer.tokenizer import tokenize
 from pyparser.lexer.tokens import (
+    CloseBracketToken,
     CloseParensToken,
     FloatToken,
     IntToken,
+    OpenBracketToken,
     OpenParensToken,
     OperatorToken,
     StringToken,
@@ -18,4 +20,6 @@ __all__ = [
     'OperatorToken',
     'OpenParensToken',
     'CloseParensToken',
+    'OpenBracketToken',
+    'CloseBracketToken',
 ]

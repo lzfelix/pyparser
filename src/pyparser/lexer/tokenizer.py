@@ -7,6 +7,8 @@ _NUMBERS_ALPHABET = set(str(i) for i in range(10))
 _SIGNS_ALPHABET = {'+', '-'}
 _OPEN_PAR = '('
 _CLOSE_PAR = ')'
+_OPEN_BRACKET = '['
+_CLOSE_BRACKET = ']'
 _OPERATORS = {'+', '-', '*', '/', '^'}
 _STR_ALPHABET = set(string.ascii_letters) | {'_'}
 
@@ -76,6 +78,12 @@ def tokenize(expr: str) -> list[tokens.Token]:
             idx += 1
         elif current_char == _CLOSE_PAR:
             parsed_tokens.append(tokens.CloseParensToken(position=idx, value=')'))
+            idx += 1
+        elif current_char == _OPEN_BRACKET:
+            parsed_tokens.append(tokens.OpenBracketToken(position=idx, value='['))
+            idx += 1
+        elif current_char == _CLOSE_BRACKET:
+            parsed_tokens.append(tokens.CloseBracketToken(position=idx, value=']'))
             idx += 1
         elif current_char in _OPERATORS:
             parsed_tokens.append(tokens.OperatorToken(position=idx, value=current_char))

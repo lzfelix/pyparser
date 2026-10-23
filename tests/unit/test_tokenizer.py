@@ -1,6 +1,6 @@
 import pytest
 from pyparser.errors import TokenizerError
-from pyparser.lexer import tokenizer
+from pyparser.lexer import tokenizer, tokens
 
 
 def tokenize_values(expression: str) -> list[str]:
@@ -103,3 +103,15 @@ def test_should_accept_nonsensical_expressions():
 
 def test_tokenize_function_call():
     assert tokenize_values('sin(x + 2)') == ['sin', '(', 'x', '+', '2', ')']
+
+
+def test_tokenize_indexed_variable():
+    assert tokenize_values('x[0] + y[12]') == ['x', '[', '0', ']', '+', 'y', '[', '12', ']']
+
+
+def test_tokenize_brackets_as_bracket_tokens():
+    result = tokenizer.tokenize('x[1]')
+
+    assert isinstance(result[1], tokens.OpenBracketToken)
+    assert isinstance(result[3], tokens.CloseBracketToken)
+    assert [token.position for token in result] == [0, 1, 2, 3]

@@ -3,7 +3,7 @@ import pytest
 from pyparser.errors import EvaluationError
 from pyparser.lexer import tokenizer
 from pyparser.parser import parser
-from pyparser.evaluators import evaluator
+from pyparser.operations import evaluator
 
 
 def _eval(expr: str, variables: dict[str, int | float] | None = None):

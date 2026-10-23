@@ -54,14 +54,15 @@ def _parse_string_value(expr: str, idx: int) -> (int, tokens.StringToken):
 
 def tokenize(expr: str) -> list[tokens.Token]:
     idx = 0
-    expr = expr.replace(' ', '')
     expr_len = len(expr)
 
     parsed_tokens = []
     while idx < expr_len:
         current_char = expr[idx]
 
-        if current_char in _NUMBERS_ALPHABET:
+        if current_char.isspace():
+            idx += 1
+        elif current_char in _NUMBERS_ALPHABET:
             idx, new_token = _parse_number(expr, idx)
             parsed_tokens.append(new_token)
         elif current_char in _STR_ALPHABET:

@@ -76,3 +76,17 @@ def test_parse_variable_name():
 
 def test_parse_function_call():
     assert tokenize_values('sin(x + 3)') == ['sin', '(', 'x', '+', '3', ')']
+
+
+def test_positions_should_account_for_whitespace():
+    positions = [token.position for token in tokenizer.tokenize('3 +  20')]
+    assert positions == [0, 2, 5]
+
+
+def test_whitespace_only_expression_should_raise():
+    with pytest.raises(TokenizerError):
+        tokenize_values('   ')
+
+
+def test_whitespace_should_separate_numbers():
+    assert tokenize_values('12 34') == ['12', '34']

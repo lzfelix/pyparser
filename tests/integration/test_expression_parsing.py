@@ -68,6 +68,18 @@ def test_subtraction_with_unary_operator():
         pytest.param('sin(0 1', ParserError, id='call-with-stray-token-instead-of-close-parens'),
         pytest.param('sin(0', ParserError, id='unclosed-call'),
         pytest.param('sin()', ParserError, id='call-without-argument'),
+        pytest.param('x[-1]', ParserError, id='negative-index'),
+        pytest.param('x[+1]', ParserError, id='signed-index'),
+        pytest.param('x[1.5]', ParserError, id='float-index'),
+        pytest.param('x[i]', ParserError, id='variable-index'),
+        pytest.param('x[1 + 1]', ParserError, id='expression-index'),
+        pytest.param('x[]', ParserError, id='empty-index'),
+        pytest.param('x[1', ParserError, id='unclosed-bracket'),
+        pytest.param('x[1)', ParserError, id='mismatched-bracket'),
+        pytest.param('x 1]', ParserError, id='unopened-bracket'),
+        pytest.param('[1]', ParserError, id='index-without-variable'),
+        pytest.param('x[0][1]', ParserError, id='multiple-indices'),
+        pytest.param('sin(x)[0]', ParserError, id='indexed-call'),
     ],
 )
 def test_malformed_expression_should_raise(expression: str, expected_error: type[Exception]):

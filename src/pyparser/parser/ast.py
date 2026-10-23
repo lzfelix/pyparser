@@ -38,6 +38,13 @@ class VariableNode(Node):
 
 
 @dataclass(frozen=True, slots=True)
+class IndexedVariableNode(Node):
+    name: str
+    index: int
+    position: int | None = field(default=None, compare=False)
+
+
+@dataclass(frozen=True, slots=True)
 class FunctionCallNode(Node):
     name: str
     arg: Node

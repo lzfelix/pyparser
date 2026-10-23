@@ -19,22 +19,24 @@ Expressions go through three stages:
 | Subtraction    | `a - b`         | `3 - 5`          | `-2`    |
 | Multiplication | `a * b`         | `3 * 4`          | `12`    |
 | Division       | `a / b`         | `7 / 2`          | `3.5`   |
+| Power          | `a ^ b`         | `2 ^ 3 ^ 2`      | `512`   |
 | Unary sign     | `+a`, `-a`      | `-+--+-3`        | `3`     |
 | Grouping       | `( ... )`       | `2 * (-7 + 5)`   | `-4`    |
 
-- `*` and `/` bind tighter than `+` and `-`; binary operators are left-associative.
+- Precedence, from highest to lowest: `^`, unary sign, `*` `/`, `+` `-`.
+- `^` is right-associative (`2 ^ 3 ^ 2` is `2 ^ (3 ^ 2)`); the other binary operators are left-associative.
+- A leading sign applies after the power, as in Python: `-2 ^ 2` is `-4`, while `(-2) ^ 2` is `4`.
 - Division always returns a float; dividing by zero raises `ZeroDivisionError`.
 - Variable names use letters and `_`, and are case-sensitive.
 - Whitespace is ignored.
-
-Not supported yet: exponentiation (`^`) is tokenized, but not parsed.
 
 ## Grammar
 
 ```
 expr    := term (('+' | '-') term)*
 term    := unary (('*' | '/') unary)*
-unary   := ('+' | '-') unary | primary
+unary   := ('+' | '-') unary | power
+power   := primary ('^' unary)?
 primary := NUMBER | VARIABLE | '(' expr ')'
 ```
 

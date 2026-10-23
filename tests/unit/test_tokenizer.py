@@ -90,3 +90,12 @@ def test_whitespace_only_expression_should_raise():
 
 def test_whitespace_should_separate_numbers():
     assert tokenize_values('12 34') == ['12', '34']
+
+
+def test_tokenize_unknown_symbol():
+    with pytest.raises(TokenizerError):
+        tokenize_values('2*3+4?7')
+
+
+def test_should_accept_nonsensical_expressions():
+    assert tokenize_values('+-*/)3(4') == ['+', '-', '*', '/', ')', '3', '(', '4']

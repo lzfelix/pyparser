@@ -22,13 +22,25 @@ Expressions go through three stages:
 | Power          | `a ^ b`         | `2 ^ 3 ^ 2`      | `512`   |
 | Unary sign     | `+a`, `-a`      | `-+--+-3`        | `3`     |
 | Grouping       | `( ... )`       | `2 * (-7 + 5)`   | `-4`    |
+| Function call  | `f(a)`          | `2 * cos(0) + 1` | `3`     |
 
-- Precedence, from highest to lowest: `^`, unary sign, `*` `/`, `+` `-`.
+- Precedence, from highest to lowest: function calls and parentheses, `^`, unary sign, `*` `/`, `+` `-`.
 - `^` is right-associative (`2 ^ 3 ^ 2` is `2 ^ (3 ^ 2)`); the other binary operators are left-associative.
 - A leading sign applies after the power, as in Python: `-2 ^ 2` is `-4`, while `(-2) ^ 2` is `4`.
 - Division always returns a float; dividing by zero raises `ZeroDivisionError`.
 - Variable names use letters and `_`, and are case-sensitive.
 - Whitespace is ignored.
+
+### Functions
+
+A name followed by `(` is a function call; otherwise it's a variable. Functions take a single argument:
+
+| Function | Meaning                     |
+|----------|-----------------------------|
+| `sin(a)` | Sine, `a` in radians        |
+| `cos(a)` | Cosine, `a` in radians      |
+| `tan(a)` | Tangent, `a` in radians     |
+| `log(a)` | Natural logarithm (base *e*) |
 
 ## Grammar
 
@@ -37,7 +49,7 @@ expr    := term (('+' | '-') term)*
 term    := unary (('*' | '/') unary)*
 unary   := ('+' | '-') unary | power
 power   := primary ('^' unary)?
-primary := NUMBER | VARIABLE | '(' expr ')'
+primary := NUMBER | VARIABLE | FUN_NAME '(' expr ')' | '(' expr ')'
 ```
 
 ## Usage
@@ -60,11 +72,11 @@ Expressions without variables can omit the mapping: `evaluator.evaluate(tree)`.
 
 All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, when known, the `position` in the input:
 
-| Error             | Raised when                                                         |
-|-------------------|---------------------------------------------------------------------|
+| Error             | Raised when |
+|-------------------|-------------|
 | `TokenizerError`  | Invalid character, malformed number (`3.`, `1.2.3`), or empty input |
-| `ParserError`     | Unexpected token, unclosed parenthesis, or incomplete expression    |
-| `EvaluationError` | Undefined variable, or unsupported operator or AST node             |
+| `ParserError`     | Unexpected token, unclosed parenthesis, or incomplete expression |
+| `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), or an unsupported operator or AST node |
 
 ## Development
 

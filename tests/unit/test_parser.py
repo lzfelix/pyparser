@@ -5,15 +5,15 @@ from pyparser.lexer import tokens
 from pyparser.parser import ast
 
 
-def _int(i: int, position: int) -> ast.TerminalNode:
-    return ast.TerminalNode(
-        expr=tokens.IntToken(i, position)
+def _int(i: int, position: int) -> ast.NumberNode:
+    return ast.NumberNode(
+        value=tokens.IntToken(i, position)
     )
 
 
-def _float(f: float, position: int) -> ast.TerminalNode:
-    return ast.TerminalNode(
-        expr=tokens.FloatToken(f, position)
+def _float(f: float, position: int) -> ast.NumberNode:
+    return ast.NumberNode(
+        value=tokens.FloatToken(f, position)
     )
 
 
@@ -366,7 +366,7 @@ def test_parse_function_call():
     expected = ast.FunctionCallNode(
         fn_name=tokens.StringToken('sin', 0),
         arg=ast.BinaryNode(
-            ast.TerminalNode(tokens.StringToken('x', 2)),
+            ast.VariableNode(tokens.StringToken('x', 2)),
             tokens.OperatorToken('+', 3),
             _int(2, 4)
         )
@@ -391,7 +391,7 @@ def test_parse_nested_function_call():
         fn_name=tokens.StringToken('cos', 0),
         arg=ast.FunctionCallNode(
             fn_name=tokens.StringToken('tan', 2),
-            arg=ast.TerminalNode(tokens.StringToken('x', 4))
+            arg=ast.VariableNode(tokens.StringToken('x', 4))
         )
     )
 
@@ -412,7 +412,7 @@ def test_function_call_followed_by_addition():
     expected = ast.BinaryNode(
         ast.FunctionCallNode(
             fn_name=tokens.StringToken('sin', 0),
-            arg=ast.TerminalNode(tokens.StringToken('x', 2)),
+            arg=ast.VariableNode(tokens.StringToken('x', 2)),
         ),
         tokens.OperatorToken('+', 4),
         _int(1, 5),
@@ -435,7 +435,7 @@ def test_function_call_raised_to_power():
     expected = ast.BinaryNode(
         ast.FunctionCallNode(
             fn_name=tokens.StringToken('sin', 0),
-            arg=ast.TerminalNode(tokens.StringToken('x', 2)),
+            arg=ast.VariableNode(tokens.StringToken('x', 2)),
         ),
         tokens.OperatorToken('^', 4),
         _int(2, 5),
@@ -458,7 +458,7 @@ def test_unary_sign_applies_to_function_call():
         tokens.OperatorToken('-', 0),
         ast.FunctionCallNode(
             fn_name=tokens.StringToken('sin', 1),
-            arg=ast.TerminalNode(tokens.StringToken('x', 3)),
+            arg=ast.VariableNode(tokens.StringToken('x', 3)),
         ),
     )
 

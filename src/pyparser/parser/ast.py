@@ -20,8 +20,13 @@ class BinaryNode(Node):
 
 
 @dataclass(frozen=True, slots=True)
-class TerminalNode(Node):
-    expr: tokens.FloatToken | tokens.IntToken | tokens.StringToken
+class NumberNode(Node):
+    value: tokens.FloatToken | tokens.IntToken
+
+
+@dataclass(frozen=True, slots=True)
+class VariableNode(Node):
+    name: tokens.StringToken
 
 
 @dataclass(frozen=True, slots=True)

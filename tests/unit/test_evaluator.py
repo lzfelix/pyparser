@@ -5,16 +5,16 @@ from pyparser.lexer import tokens
 from pyparser.parser import ast
 
 
-def _int(i: int) -> ast.TerminalNode:
-    return ast.TerminalNode(tokens.IntToken(i, 0))
+def _int(i: int) -> ast.NumberNode:
+    return ast.NumberNode(tokens.IntToken(i, 0))
 
 
-def _float(f: float) -> ast.TerminalNode:
-    return ast.TerminalNode(tokens.FloatToken(f, 0))
+def _float(f: float) -> ast.NumberNode:
+    return ast.NumberNode(tokens.FloatToken(f, 0))
 
 
-def _var(name: str, position: int = 0) -> ast.TerminalNode:
-    return ast.TerminalNode(tokens.StringToken(name, position))
+def _var(name: str, position: int = 0) -> ast.VariableNode:
+    return ast.VariableNode(tokens.StringToken(name, position))
 
 
 def _unary(operator: str, expr: ast.Node) -> ast.UnaryNode:
@@ -25,11 +25,11 @@ def _binary(left: ast.Node, operator: str, right: ast.Node) -> ast.BinaryNode:
     return ast.BinaryNode(left, tokens.OperatorToken(operator, 0), right)
 
 
-def test_int_terminal_evaluates_to_its_value():
+def test_int_number_evaluates_to_its_value():
     assert evaluator.evaluate(_int(3)) == 3
 
 
-def test_float_terminal_evaluates_to_its_value():
+def test_float_number_evaluates_to_its_value():
     assert evaluator.evaluate(_float(3.14)) == 3.14
 
 

@@ -27,14 +27,14 @@ def _parse_primary(container: TokenContainer) -> ast.Node:
 
     match head:
         case tokens.IntToken() | tokens.FloatToken() as token:
-            return ast.TerminalNode(expr=token)
+            return ast.NumberNode(value=token)
         case tokens.StringToken() as token:
             if not container.is_exhausted() and isinstance(container.peek(), tokens.OpenParensToken):
                 container.next()  # Consume open parens
                 arg = _parse_parenthesized(container)
                 return ast.FunctionCallNode(fn_name=token, arg=arg)
             else:
-                return ast.TerminalNode(expr=token)
+                return ast.VariableNode(name=token)
         case tokens.OpenParensToken():
             return _parse_parenthesized(container)
         case _:

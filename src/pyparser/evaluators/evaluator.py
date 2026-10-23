@@ -2,7 +2,6 @@ import math
 from collections.abc import Mapping
 
 from pyparser import errors
-from pyparser.lexer import tokens
 from pyparser.parser import ast
 
 
@@ -26,14 +25,11 @@ def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None)
             case _:
                 raise errors.EvaluationError(f'Unsupported unary operation "{unary.operator.value}"')
 
-    def _evaluate_terminal(terminal: ast.TerminalNode) -> int | float:
-        match terminal.expr:
-            case tokens.StringToken(value=name, position=position):
-                if name not in variables:
-                    raise errors.EvaluationError(f'Undefined variable "{name}"', position=position)
-                return variables[name]
-            case token:
-                return token.value
+    def _evaluate_variable(variable: ast.VariableNode) -> int | float:
+        name = variable.name.value
+        if name not in variables:
+            raise errors.EvaluationError(f'Undefined variable "{name}"', position=variable.name.position)
+        return variables[name]
 
     def _evaluate_binary(binary: ast.BinaryNode) -> int | float:
         left = _evaluate(binary.l_expr)
@@ -69,8 +65,10 @@ def evaluate(root: ast.Node, variables: Mapping[str, int | float] | None = None)
         match node:
             case ast.UnaryNode() as unary:
                 return _evaluate_unary(unary)
-            case ast.TerminalNode() as terminal:
-                return _evaluate_terminal(terminal)
+            case ast.NumberNode() as number:
+                return number.value.value
+            case ast.VariableNode() as variable:
+                return _evaluate_variable(variable)
             case ast.BinaryNode() as binary:
                 return _evaluate_binary(binary)
             case ast.FunctionCallNode() as fn_call:

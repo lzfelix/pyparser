@@ -50,6 +50,13 @@ def _eval(expr: str, variables: dict[str, int | float] | None = None):
         pytest.param('cos(sin(0))', {}, 1.0, id='nested-function-call'),
         pytest.param('sin(1.21)^2 + cos(1.21)^2', {}, 1, id='call-raised-to-power'),
         pytest.param('cos(sin(x))', {'x': 0}, 1.0, id='nested-call-with-variable'),
+
+        # Indexed variables
+        pytest.param('x[0] + x[1]', {'x': [1, 2]}, 3, id='indexed-variables'),
+        pytest.param('x[0] + y', {'x': [1, 2], 'y': 10}, 11, id='indexed-and-plain-variables'),
+        pytest.param('x[0] * x[1] ^ 2', {'x': [2, 3]}, 18, id='indexed-variables-respect-precedence'),
+        pytest.param('-x[1]', {'x': [1, 2]}, -2, id='unary-sign-on-indexed-variable'),
+        pytest.param('sin(x[0])^2 + cos(x[0])^2', {'x': [0.7]}, 1, id='indexed-variable-as-function-argument'),
     ],
 )
 def test_evaluate(expression: str, variables: dict[str, int | float], expected: int | float):
@@ -63,6 +70,9 @@ def test_evaluate(expression: str, variables: dict[str, int | float], expected: 
         pytest.param('1 / x', {'x': 0}, ZeroDivisionError, id='division-by-zero-through-variable'),
         pytest.param('2 * x + y', {'x': 3}, EvaluationError, id='undefined-variable'),
         pytest.param('log(0)', {}, EvaluationError, id='function-outside-its-domain'),
+        pytest.param('x[2]', {'x': [1, 2]}, EvaluationError, id='index-out-of-range'),
+        pytest.param('y[0]', {'y': 3}, EvaluationError, id='indexing-single-value'),
+        pytest.param('x + 1', {'x': [1, 2]}, EvaluationError, id='multiple-values-without-index'),
         pytest.param('sin(etan(x))', {'x': 0}, EvaluationError, id='undefined-function'),
         pytest.param('2 * x - y', {'x': 3}, EvaluationError, id='undefined-variable'),
     ],

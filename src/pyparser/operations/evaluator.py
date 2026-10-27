@@ -68,7 +68,7 @@ def evaluate(root: ast.Node, variables: Mapping[str, Value] | None = None) -> in
             case _:
                 raise errors.EvaluationError(f'Unsupported operation "{binary.operator}"', position=binary.position)
 
-    def _evaluate_function(fn_call: ast.FunctionCallNode):
+    def _evaluate_function(fn_call: ast.FunctionCallNode) -> float:
         fn = BUILTINS.get(fn_call.name)
         if not fn:
             raise errors.EvaluationError(f'Unknown function "{fn_call.name}".', position=fn_call.position)

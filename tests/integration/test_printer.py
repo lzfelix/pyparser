@@ -28,6 +28,8 @@ def _parse(expr: str):
         pytest.param('sin((x+1))', 'sin(x + 1)', id='drops-parens-inside-call'),
         pytest.param('(sin(x))^2+(cos(x))^2', 'sin(x) ^ 2 + cos(x) ^ 2', id='drops-parens-around-calls'),
         pytest.param('(x[0])*x[1]', 'x[0] * x[1]', id='drops-parens-around-indexed-variable'),
+        pytest.param('2*pi', '2 * pi', id='keeps-constants-symbolic'),
+        pytest.param('e^(-x^2)', 'e ^ -x ^ 2', id='keeps-constant-base-symbolic'),
     ],
 )
 def test_to_string(expression: str, expected: str):
@@ -51,6 +53,7 @@ def test_to_string(expression: str, expected: str):
         'sin(x) ^ 2 + cos(-x ^ 2) * log(2 * (y + 1))',
         'x[0] * (x[1] - x[2]) ^ 2 / -x[3]',
         '3.14 * r ^ 2',
+        'pi * r ^ 2 + e ^ (2 * x)',
         '(((a)))',
     ],
 )

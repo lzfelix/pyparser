@@ -17,6 +17,7 @@ Expressions are tokenized and parsed into a tree, which can then be evaluated, p
 | Integers       | `42`            | `42`             | `42`    |
 | Decimals       | `3.14`          | `3.14 * 2`       | `6.28`  |
 | Variables      | `x`, `long_name`| `2 * x` (x = 3)  | `6`     |
+| Constants      | `e`, `pi`       | `cos(pi)`        | `-1.0`  |
 | Indexed variables | `x[i]`       | `x[0] + x[1]` (x = [1, 2]) | `3` |
 | Addition       | `a + b`         | `3 + 2`          | `5`     |
 | Subtraction    | `a - b`         | `3 - 5`          | `-2`    |
@@ -32,6 +33,7 @@ Expressions are tokenized and parsed into a tree, which can then be evaluated, p
 - A leading sign applies after the power, as in Python: `-2 ^ 2` is `-4`, while `(-2) ^ 2` is `4`.
 - Division always returns a float; dividing by zero raises `ZeroDivisionError`.
 - Variable names use letters and `_`, and are case-sensitive.
+- `e` and `pi` are reserved for the [built-in constants](#constants): they can't be bound as variables or indexed, while `E` and `PI` are ordinary variables.
 - Indexed variables take a single non-negative integer literal as index (`x[0]`); expressions, variables, negative numbers and multiple indices (`x[i]`, `x[-1]`, `x[0][1]`) are rejected by the parser.
 - Whitespace is ignored.
 
@@ -45,6 +47,26 @@ A name followed by `(` is a function call; otherwise it's a variable. Functions 
 | `cos(a)` | Cosine, `a` in radians      |
 | `tan(a)` | Tangent, `a` in radians     |
 | `log(a)` | Natural logarithm (base *e*) |
+
+### Constants
+
+| Constant | Value                        |
+|----------|------------------------------|
+| `e`      | Euler's number, `2.718281...` |
+| `pi`     | *π*, `3.141592...`            |
+
+Constants are written like variables and only replaced by their value when evaluating, so trees keep them symbolic: `2*pi` prints as `2 * pi`, and differentiating them gives `0`, as for any other name that isn't `var`.
+See [ADR 0003](docs/decisions/0003-constants-are-resolved-at-evaluation-time.md) for the reasoning.
+Exponentials are written as powers of `e`: `e ^ x`, `e ^ (-x ^ 2)`.
+
+Binding a constant's name raises `EvaluationError`, even if the expression doesn't use it:
+
+```python
+evaluator.evaluate(parser.parse(tokenizer.tokenize('2 * pi * r')), {'r': 1})   # 6.283185307179586
+evaluator.evaluate(parser.parse(tokenizer.tokenize('x + 1')), {'x': 1, 'e': 2})  # EvaluationError
+```
+
+Calling a constant (`e(2)`) is an unknown function, and indexing one (`pi[0]`) is an error.
 
 ## Grammar
 
@@ -136,6 +158,17 @@ evaluator.evaluate(second, {'x': 2})    # 12  (6 * x)
 
 Without simplification, each repeated differentiation makes the tree noticeably larger.
 
+Exponentials follow the constant-base rule below. `log(e)` isn't simplified away, but evaluates to `1`, so the derivative of `e ^ x` evaluates to `e ^ x`:
+
+```python
+derivative = differentiate(parser.parse(tokenizer.tokenize('e ^ x')), ast.VariableNode('x'))
+
+printer.to_string(derivative)               # 'e ^ x * log(e) * 1'
+evaluator.evaluate(derivative, {'x': 1})    # 2.718281828459045
+```
+
+Constants can't be differentiated by: `differentiate(tree, ast.VariableNode('pi'))` raises `DifferentiationError`.
+
 Rules applied, where `u` and `v` are subtrees and `'` marks their derivative:
 
 | Expression | Derivative |
@@ -149,6 +182,7 @@ Rules applied, where `u` and `v` are subtrees and `'` marks their derivative:
 | `u ^ 0` | `0` |
 | `u ^ n` (`n` without `var`) | `n * u ^ (n - 1) * u'` |
 | `a ^ v` (`a` without `var`) | `a ^ v * log(a) * v'` |
+| `e ^ v` | `e ^ v * log(e) * v'`, which evaluates to `e ^ v * v'` |
 | `u ^ v` (both with `var`) | `u ^ v * (v' * log(u) + v * (u' / u))` |
 | `sin(u)` | `cos(u) * u'` |
 | `cos(u)` | `-sin(u) * u'` |
@@ -163,8 +197,8 @@ All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, 
 |-------------------|-------------|
 | `TokenizerError`  | Invalid character, malformed number (`3.`, `1.2.3`), or empty input |
 | `ParserError`     | Unexpected token, unclosed parenthesis, or incomplete expression |
-| `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), an index out of range, indexing a single value or using a sequence without an index, or an unsupported operator or AST node |
-| `DifferentiationError` | Unknown function or unsupported operator in a subtree that depends on the variable |
+| `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), an index out of range, indexing a single value or using a sequence without an index, binding or indexing a constant (`e`, `pi`), or an unsupported operator or AST node |
+| `DifferentiationError` | Differentiating with respect to a constant, or an unknown function or unsupported operator in a subtree that depends on the variable |
 
 ## Development
 

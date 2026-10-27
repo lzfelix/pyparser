@@ -1,7 +1,7 @@
 import pytest
 
 from pyparser.lexer import tokenizer
-from pyparser.operations.helpers import depends_on
+from pyparser.operations.helpers import depends_on, variable_uses
 from pyparser.parser import ast, parser
 
 
@@ -25,3 +25,18 @@ def _parse(expr: str) -> ast.Node:
 )
 def test_depends_on(expression: str, var: ast.Node, expected: bool):
     assert depends_on(_parse(expression), var) is expected
+
+
+@pytest.mark.parametrize(
+    ('expression', 'expected'),
+    [
+        pytest.param('3 * 2 + 1', [], id='only-numbers'),
+        pytest.param('x', [('x', 0)], id='single-variable'),
+        pytest.param('y * sin(-(z + x))', [('y', 0), ('z', 10), ('x', 14)], id='nested-in-call'),
+        pytest.param('x ^ 2 + 2 * x', [('x', 0), ('x', 12)], id='repeated-variable'),
+        pytest.param('x[0] * x[1]', [('x', 0), ('x', 7)], id='indexed-variables'),
+        pytest.param('-a ^ b ^ c', [('a', 1), ('b', 5), ('c', 9)], id='right-associative-power'),
+    ],
+)
+def test_variable_uses(expression: str, expected: list[tuple[str, int]]):
+    assert [(use.name, use.position) for use in variable_uses(_parse(expression))] == expected

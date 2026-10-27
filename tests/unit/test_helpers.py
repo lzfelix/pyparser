@@ -29,10 +29,9 @@ def _binary(left: ast.Node, operator: str, right: ast.Node) -> ast.BinaryNode:
         pytest.param(_X0, _X, False, id='indexed-variable-is-not-plain-variable'),
         pytest.param(_X, _X0, False, id='plain-variable-is-not-indexed-variable'),
 
-        # Positions don't matter
         pytest.param(ast.VariableNode('x', position=7), ast.VariableNode('x', position=0), True, id='ignores-positions'),
 
-        # Inner nodes look at their children
+        # Inner nodes
         pytest.param(ast.UnaryNode('-', _X), _X, True, id='unary-with-variable'),
         pytest.param(ast.UnaryNode('-', _Y), _X, False, id='unary-without-variable'),
         pytest.param(_binary(_X, '+', _int(1)), _X, True, id='binary-variable-on-left'),
@@ -41,10 +40,8 @@ def _binary(left: ast.Node, operator: str, right: ast.Node) -> ast.BinaryNode:
         pytest.param(ast.FunctionCallNode('sin', _X), _X, True, id='call-with-variable'),
         pytest.param(ast.FunctionCallNode('sin', _Y), _X, False, id='call-without-variable'),
 
-        # Function names are not variables
         pytest.param(ast.FunctionCallNode('sin', _Y), ast.VariableNode('sin'), False, id='function-name-is-not-a-variable'),
 
-        # Deeply nested
         pytest.param(
             _binary(_int(2), '*', ast.FunctionCallNode('cos', _binary(_Y, '-', ast.UnaryNode('-', _X)))),
             _X,

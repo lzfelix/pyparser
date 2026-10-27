@@ -24,6 +24,7 @@ def test_builtins_cannot_be_modified():
         pytest.param('cos', math.cos, id='cos'),
         pytest.param('tan', math.tan, id='tan'),
         pytest.param('log', math.log, id='log'),
+        pytest.param('sqrt', math.sqrt, id='sqrt'),
     ],
 )
 def test_implementation(name: str, implementation):
@@ -45,6 +46,15 @@ def test_implementation(name: str, implementation):
             id='tan',
         ),
         pytest.param('log', ast.BinaryNode(ast.NumberNode(1), '/', _U), id='log'),
+        pytest.param(
+            'sqrt',
+            ast.BinaryNode(
+                ast.NumberNode(1),
+                '/',
+                ast.BinaryNode(ast.NumberNode(2), '*', ast.FunctionCallNode('sqrt', _U)),
+            ),
+            id='sqrt',
+        ),
     ],
 )
 def test_derivative(name: str, expected: ast.Node):
@@ -55,3 +65,13 @@ def test_derivative_keeps_the_argument_subtree():
     argument = ast.BinaryNode(ast.VariableNode('x'), '^', ast.NumberNode(2))
 
     assert BUILTINS['sin'].derivative(argument) == ast.FunctionCallNode('cos', argument)
+
+
+def test_sqrt_derivative_keeps_the_argument_subtree():
+    argument = ast.BinaryNode(ast.VariableNode('x'), '+', ast.NumberNode(1))
+
+    assert BUILTINS['sqrt'].derivative(argument) == ast.BinaryNode(
+        ast.NumberNode(1),
+        '/',
+        ast.BinaryNode(ast.NumberNode(2), '*', ast.FunctionCallNode('sqrt', argument)),
+    )

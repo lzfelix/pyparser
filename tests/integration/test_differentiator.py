@@ -67,6 +67,10 @@ _Y = ast.VariableNode('y')
         pytest.param('log(x) / x', _X, {'x': 2.0}, id='quotient-with-function'),
         pytest.param('x ^ sin(x)', _X, {'x': 0.7}, id='function-in-exponent'),
         pytest.param('log(cos(x) ^ 2 + 1)', _X, {'x': 0.7}, id='log-of-expression'),
+        pytest.param('sqrt(x)', _X, {'x': 0.7}, id='sqrt'),
+        pytest.param('sqrt(x ^ 2 + 1)', _X, {'x': -1.5}, id='sqrt-of-expression'),
+        pytest.param('x * sqrt(x)', _X, {'x': 2.0}, id='product-with-sqrt'),
+        pytest.param('sqrt(sin(x) + 2)', _X, {'x': 0.7}, id='sqrt-of-function'),
 
         # Partial derivatives
         pytest.param('x * y ^ 2', _X, {'x': 2.0, 'y': 3.0}, id='partial-wrt-x'),
@@ -107,3 +111,10 @@ def test_unknown_function_reports_position():
     with pytest.raises(DifferentiationError) as exc_info:
         differentiate(_parse('2 * etan(x)'), _X)
     assert exc_info.value.position == 4
+
+
+def test_sqrt_derivative_is_undefined_at_zero():
+    derivative = differentiate(_parse('sqrt(x)'), _X)
+
+    with pytest.raises(ZeroDivisionError):
+        evaluator.evaluate(derivative, {'x': 0.0})

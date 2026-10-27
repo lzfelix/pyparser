@@ -39,11 +39,21 @@ def _log_derivative(u: ast.Node) -> ast.Node:
     return ast.BinaryNode(ast.NumberNode(1), '/', u)
 
 
+def _sqrt_derivative(u: ast.Node) -> ast.Node:
+    # sqrt'(u) = 1 / (2 * sqrt(u))
+    return ast.BinaryNode(
+        ast.NumberNode(1),
+        '/',
+        ast.BinaryNode(ast.NumberNode(2), '*', ast.FunctionCallNode('sqrt', u)),
+    )
+
+
 BUILTINS: Mapping[str, Function] = MappingProxyType({
     function.name: function for function in [
         Function('sin', math.sin, _sin_derivative),
         Function('cos', math.cos, _cos_derivative),
         Function('tan', math.tan, _tan_derivative),
         Function('log', math.log, _log_derivative),
+        Function('sqrt', math.sqrt, _sqrt_derivative),
     ]
 })

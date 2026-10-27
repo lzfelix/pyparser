@@ -1,13 +1,13 @@
 # pyparser
 
-A small arithmetic expression parser, evaluator and pretty-printer written in pure Python.
+A small arithmetic expression parser, evaluator, pretty-printer and symbolic differentiator written in pure Python.
 
-Expressions are tokenized and parsed into a tree, which can then be evaluated or printed:
+Expressions are tokenized and parsed into a tree, which can then be evaluated, printed or differentiated:
 
 ```
                                                       ┌─ evaluate(variables) ─▶  8.5
-"2 * x + y"  ─ tokenize ─▶  list[Token]  ─ parse ─▶  AST
-                                                      └─ to_string ─▶  "2 * x + y"
+"2 * x + y"  ─ tokenize ─▶  list[Token]  ─ parse ─▶  AST ── to_string ─▶  "2 * x + y"
+                                                      └─ differentiate(x) ─▶  AST of "0 * x + 2 * 1 + 0"
 ```
 
 ## Supported operations
@@ -93,6 +93,52 @@ printer.to_string(parser.parse(tokenizer.tokenize('(2^3)^(2^1)')))    # '(2 ^ 3)
 Parsing the printed text always gives back an equal tree. Parentheses are kept even when the result wouldn't change (`1 + (2 + 3)`), since dropping them would change the tree's shape.
 Floats that Python prints in scientific notation (e.g. `1e-07`) can't be tokenized back.
 
+### Differentiation
+
+`differentiate(tree, var)` builds the derivative of a tree with respect to a variable, as a new tree that can be printed, evaluated or differentiated again:
+
+```python
+from pyparser.operations.differentiator import differentiate
+from pyparser.parser import ast
+
+tree = parser.parse(tokenizer.tokenize('x * sin(x)'))
+derivative = differentiate(tree, ast.VariableNode('x'))
+
+printer.to_string(derivative)               # '1 * sin(x) + x * (cos(x) * 1)'
+evaluator.evaluate(derivative, {'x': 0})    # 0.0
+```
+
+Results are correct but not simplified: `2 * x + y` differentiates to `0 * x + 2 * 1 + 0`.
+
+Variables other than `var` are treated as constants, so this computes partial derivatives. Indexed variables are separate variables, so `x`, `x[0]` and `x[1]` are all independent:
+
+```python
+differentiate(parser.parse(tokenizer.tokenize('x * y ^ 2')), ast.VariableNode('y'))
+# printed: 0 * y ^ 2 + x * (2 * y ^ (2 - 1) * 1)
+
+differentiate(parser.parse(tokenizer.tokenize('x[0] * x[1]')), ast.IndexedVariableNode('x', 1))
+# printed: 0 * x[1] + x[0] * 1
+```
+
+Rules applied, where `u` and `v` are subtrees and `'` marks their derivative:
+
+| Expression | Derivative |
+|------------|------------|
+| anything without `var` | `0` |
+| `var` | `1` |
+| `±u` | `±u'` |
+| `u ± v` | `u' ± v'` |
+| `u * v` | `u' * v + u * v'` |
+| `u / v` | `(u' * v - u * v') / v ^ 2` |
+| `u ^ 0` | `0` |
+| `u ^ n` (`n` without `var`) | `n * u ^ (n - 1) * u'` |
+| `a ^ v` (`a` without `var`) | `a ^ v * log(a) * v'` |
+| `u ^ v` (both with `var`) | `u ^ v * (v' * log(u) + v * (u' / u))` |
+| `sin(u)` | `cos(u) * u'` |
+| `cos(u)` | `-sin(u) * u'` |
+| `tan(u)` | `1 / cos(u) ^ 2 * u'` |
+| `log(u)` | `1 / u * u'` |
+
 ## Errors
 
 All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, when known, the `position` in the input:
@@ -102,6 +148,7 @@ All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, 
 | `TokenizerError`  | Invalid character, malformed number (`3.`, `1.2.3`), or empty input |
 | `ParserError`     | Unexpected token, unclosed parenthesis, or incomplete expression |
 | `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), an index out of range, indexing a single value or using a sequence without an index, or an unsupported operator or AST node |
+| `DifferentiationError` | Unknown function or unsupported operator in a subtree that depends on the variable |
 
 ## Development
 

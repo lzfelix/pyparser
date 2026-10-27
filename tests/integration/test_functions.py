@@ -16,6 +16,7 @@ def _numerical_derivative(f, x: float, h: float = 1e-6) -> float:
         pytest.param('cos', [-2.0, 0.0, 0.5, 3.0], id='cos'),
         pytest.param('tan', [-1.0, 0.0, 0.5, 1.2], id='tan'),
         pytest.param('log', [0.1, 1.0, 2.5, 10.0], id='log'),
+        pytest.param('sqrt', [0.1, 1.0, 2.5, 10.0], id='sqrt'),
     ],
 )
 def test_derivative_matches_numerical_derivative(name: str, points: list[float]):

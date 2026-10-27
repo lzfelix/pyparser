@@ -120,6 +120,22 @@ differentiate(parser.parse(tokenizer.tokenize('x[0] * x[1]')), ast.IndexedVariab
 # printed: 0 * x[1] + x[0] * 1
 ```
 
+`differentiate` never modifies its input, so the same tree can be differentiated any number of times: once per variable to build a **gradient** that can then be evaluated at any point, or repeatedly for **higher-order derivatives**:
+
+```python
+tree = parser.parse(tokenizer.tokenize('x * y ^ 2 + sin(x)'))
+gradient = [differentiate(tree, ast.VariableNode(name)) for name in ['x', 'y']]
+
+[evaluator.evaluate(partial, {'x': 1, 'y': 2}) for partial in gradient]    # [4.5403..., 4]  (y ^ 2 + cos(x), 2 * x * y)
+[evaluator.evaluate(partial, {'x': 0, 'y': -1}) for partial in gradient]   # [2.0, 0]
+
+x = ast.VariableNode('x')
+second = differentiate(differentiate(parser.parse(tokenizer.tokenize('x ^ 3')), x), x)
+evaluator.evaluate(second, {'x': 2})    # 12  (6 * x)
+```
+
+Without simplification, each repeated differentiation makes the tree noticeably larger.
+
 Rules applied, where `u` and `v` are subtrees and `'` marks their derivative:
 
 | Expression | Derivative |

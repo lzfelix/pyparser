@@ -19,3 +19,7 @@ class EvaluationError(PyParserError):
 
 class DifferentiationError(PyParserError):
     pass
+
+
+class ExpressionError(PyParserError):
+    pass

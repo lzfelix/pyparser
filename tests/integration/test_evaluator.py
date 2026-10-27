@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from pyparser.errors import EvaluationError
@@ -57,6 +59,16 @@ def _eval(expr: str, variables: dict[str, int | float] | None = None):
         pytest.param('x[0] * x[1] ^ 2', {'x': [2, 3]}, 18, id='indexed-variables-respect-precedence'),
         pytest.param('-x[1]', {'x': [1, 2]}, -2, id='unary-sign-on-indexed-variable'),
         pytest.param('sin(x[0])^2 + cos(x[0])^2', {'x': [0.7]}, 1, id='indexed-variable-as-function-argument'),
+
+        # Constants
+        pytest.param('pi', {}, math.pi, id='pi'),
+        pytest.param('e', {}, math.e, id='e'),
+        pytest.param('2 * pi', {}, 2 * math.pi, id='constant-in-product'),
+        pytest.param('log(e)', {}, 1, id='log-of-e'),
+        pytest.param('cos(pi)', {}, -1, id='cos-of-pi'),
+        pytest.param('e ^ 2', {}, math.e ** 2, id='power-of-e'),
+        pytest.param('pi * r ^ 2', {'r': 2}, 4 * math.pi, id='constant-with-variable'),
+        pytest.param('PI + E', {'PI': 1, 'E': 2}, 3, id='uppercase-names-are-variables'),
     ],
 )
 def test_evaluate(expression: str, variables: dict[str, int | float], expected: int | float):
@@ -75,6 +87,11 @@ def test_evaluate(expression: str, variables: dict[str, int | float], expected: 
         pytest.param('x + 1', {'x': [1, 2]}, EvaluationError, id='multiple-values-without-index'),
         pytest.param('sin(etan(x))', {'x': 0}, EvaluationError, id='undefined-function'),
         pytest.param('2 * x - y', {'x': 3}, EvaluationError, id='undefined-variable'),
+        pytest.param('2 * pi', {'pi': 3}, EvaluationError, id='binding-pi'),
+        pytest.param('e ^ x', {'x': 1, 'e': 2}, EvaluationError, id='binding-e'),
+        pytest.param('x + 1', {'x': 1, 'pi': 3}, EvaluationError, id='binding-unused-constant'),
+        pytest.param('PI', {}, EvaluationError, id='uppercase-name-is-undefined-variable'),
+        pytest.param('e(2)', {}, EvaluationError, id='calling-constant'),
     ],
 )
 def test_evaluate_should_raise(expression: str, variables: dict[str, int | float], expected_error: type[Exception]):
@@ -87,3 +104,9 @@ def test_same_expression_with_different_bindings():
 
     assert evaluator.evaluate(tree, {'x': 2}) == 4
     assert evaluator.evaluate(tree, {'x': 3}) == 9
+
+
+def test_indexing_constant_reports_position():
+    with pytest.raises(EvaluationError) as exc_info:
+        _eval('2 * pi[0]')
+    assert exc_info.value.position == 4

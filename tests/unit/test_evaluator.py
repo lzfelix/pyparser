@@ -1,3 +1,5 @@
+import math
+
 import pytest
 from pyparser.errors import EvaluationError
 from pyparser.operations import evaluator
@@ -230,3 +232,61 @@ def test_multiple_values_without_index_raises():
     with pytest.raises(EvaluationError) as exc_info:
         evaluator.evaluate(_binary(_var('x', position=0), '+', _int(1)), {'x': [1, 2, 3]})
     assert exc_info.value.position == 0
+
+
+@pytest.mark.parametrize(
+    ('name', 'expected'),
+    [
+        pytest.param('e', math.e, id='e'),
+        pytest.param('pi', math.pi, id='pi'),
+    ],
+)
+def test_constant_evaluates_to_its_value(name: str, expected: float):
+    assert evaluator.evaluate(_var(name)) == expected
+
+
+def test_constant_inside_binary_expression():
+    # 2 * pi
+    assert evaluator.evaluate(_binary(_int(2), '*', _var('pi'))) == 2 * math.pi
+
+
+def test_constant_alongside_variables():
+    # x * e
+    assert evaluator.evaluate(_binary(_var('x'), '*', _var('e')), {'x': 2}) == 2 * math.e
+
+
+@pytest.mark.parametrize(
+    'variables',
+    [
+        pytest.param({'pi': 3}, id='pi'),
+        pytest.param({'e': 2.7}, id='e'),
+        pytest.param({'x': 1, 'e': [1, 2]}, id='sequence-among-other-variables'),
+    ],
+)
+def test_binding_constant_raises(variables: dict):
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_var('pi'), variables)
+
+
+def test_binding_constant_raises_even_when_unused():
+    with pytest.raises(EvaluationError):
+        evaluator.evaluate(_int(3), {'e': 1})
+
+
+def test_binding_constants_error_lists_names():
+    with pytest.raises(EvaluationError) as exc_info:
+        evaluator.evaluate(_var('x'), {'pi': 3, 'x': 1, 'e': 2})
+    assert '"pi"' in exc_info.value.message
+    assert '"e"' in exc_info.value.message
+    assert '"x"' not in exc_info.value.message
+
+
+@pytest.mark.parametrize('name', ['E', 'PI', 'Pi'])
+def test_constant_names_are_case_sensitive(name: str):
+    assert evaluator.evaluate(_var(name), {name: 5}) == 5
+
+
+def test_indexing_constant_raises():
+    with pytest.raises(EvaluationError) as exc_info:
+        evaluator.evaluate(_indexed('pi', 0, position=3))
+    assert exc_info.value.position == 3

@@ -40,6 +40,8 @@ _Y = ast.VariableNode('y')
         pytest.param('3 * x ^ 2 - 2 * x + 7', _X, {'x': 1.5}, id='polynomial'),
         pytest.param('x ^ 2', _X, {'x': -1.5}, id='square-at-negative-point'),
         pytest.param('x ^ -1', _X, {'x': 1.5}, id='negative-exponent'),
+        pytest.param('x ^ 0', _X, {'x': 0.0}, id='zero-exponent-at-zero'),
+        pytest.param('(x - 2) ^ 0', _X, {'x': 2.0}, id='zero-exponent-of-expression-at-its-root'),
         pytest.param('x ^ 0.5', _X, {'x': 2.0}, id='fractional-exponent'),
         pytest.param('-(x - 1) ^ 3', _X, {'x': 0.5}, id='negated-cube'),
 

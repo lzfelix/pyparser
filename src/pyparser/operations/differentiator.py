@@ -64,6 +64,11 @@ def differentiate(root: ast.Node, var: ast.VariableNode | ast.IndexedVariableNod
                     return ast.BinaryNode(node, '*', ast.BinaryNode(log_term, '+', ratio_term))
 
                 if u_varies:
+                    # u ^ 0 is the constant 1. The general rule below would build u ^ -1,
+                    # which fails to evaluate at u = 0 even though the derivative is 0 there
+                    if v == ast.NumberNode(0):
+                        return ast.NumberNode(0)
+
                     # Constant exponent: (u ^ n)' = n * u ^ (n - 1) * u'
                     lowered_power = ast.BinaryNode(u, '^', ast.BinaryNode(v, '-', ast.NumberNode(1)))
                     return ast.BinaryNode(ast.BinaryNode(v, '*', lowered_power), '*', _differentiate(u))

@@ -140,6 +140,21 @@ def test_differentiate(tree: ast.Node, var: ast.Node, expected: ast.Node):
     assert differentiate(tree, var) == expected
 
 
+@pytest.mark.parametrize(
+    'exponent',
+    [
+        pytest.param(_int(0), id='int'),
+        pytest.param(ast.NumberNode(0.0), id='float'),
+    ],
+)
+def test_zero_exponent_gives_zero(exponent: ast.Node):
+    assert differentiate(_binary(_X, '^', exponent), _X) == _ZERO
+
+
+def test_zero_exponent_of_expression_gives_zero():
+    assert differentiate(_binary(_call('sin', _X), '^', _int(0)), _X) == _ZERO
+
+
 def test_constant_exponent_does_not_introduce_log():
     derivative = differentiate(_binary(_X, '^', _int(2)), _X)
 

@@ -1,5 +1,5 @@
 import pytest
-from pyparser.operations.helpers import depends_on
+from pyparser.operations.helpers import depends_on, variable_uses
 from pyparser.parser import ast
 
 
@@ -63,3 +63,40 @@ def test_depends_on(tree: ast.Node, var: ast.Node, expected: bool):
 def test_unknown_node_raises():
     with pytest.raises(ValueError):
         depends_on(ast.Node(), _X)
+
+
+@pytest.mark.parametrize(
+    ('tree', 'expected'),
+    [
+        pytest.param(_int(3), [], id='number'),
+        pytest.param(_X, [_X], id='variable'),
+        pytest.param(_X0, [_X0], id='indexed-variable'),
+        pytest.param(ast.UnaryNode('-', _Y), [_Y], id='unary'),
+        pytest.param(_binary(_X, '+', _Y), [_X, _Y], id='binary-left-before-right'),
+        pytest.param(_binary(_Y, '*', _X), [_Y, _X], id='binary-keeps-order'),
+        pytest.param(_binary(_X, '*', _X), [_X, _X], id='repeated-uses'),
+        pytest.param(ast.FunctionCallNode('sin', _X1), [_X1], id='call-argument'),
+        pytest.param(ast.FunctionCallNode('sin', _int(1)), [], id='function-name-is-not-a-variable'),
+        pytest.param(
+            _binary(ast.UnaryNode('-', _X0), '/', ast.FunctionCallNode('cos', _binary(_Y, '^', _X))),
+            [_X0, _Y, _X],
+            id='deeply-nested',
+        ),
+    ],
+)
+def test_variable_uses(tree: ast.Node, expected: list[ast.Node]):
+    assert variable_uses(tree) == expected
+
+
+def test_variable_uses_keeps_nodes_with_positions():
+    first = ast.VariableNode('x', position=0)
+    second = ast.VariableNode('x', position=4)
+
+    uses = variable_uses(_binary(first, '+', second))
+
+    assert [use.position for use in uses] == [0, 4]
+
+
+def test_variable_uses_unknown_node_raises():
+    with pytest.raises(ValueError):
+        variable_uses(ast.Node())

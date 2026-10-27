@@ -26,7 +26,7 @@ f.differentiate('x').differentiate('y').evaluate({'x': 3, 'y': 2})
 - **Immutable and comparable.** Instances can't be modified, and compare and hash by `(tree, variables)`, so trees compare structurally as elsewhere.
 - **No behaviour moves into the AST.** The class only delegates to the existing operation functions (see [0001](0001-operations-use-pattern-matching-instead-of-visitors.md)); the lower-level functions remain public.
 
-The check for undeclared variables lives in one function, using the `helpers.variable_uses` operation, so names that need no declaration (such as built-in constants) can be skipped there.
+The check for undeclared variables lives in one function, using the `helpers.variable_uses` operation. Built-in constants (`e`, `pi`, see ADR 0003) are skipped there: they need no declaration, can't be declared (the evaluator refuses to bind them, so such an expression could never be evaluated), can't be indexed, and can't be differentiated by. All three misuses raise `ExpressionError` up front.
 
 ## Consequences
 

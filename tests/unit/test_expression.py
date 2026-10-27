@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from pyparser import Expression
@@ -356,3 +358,46 @@ def test_is_immutable(attribute: str):
 
     assert expression.tree == _X
     assert expression.variables == ('x',)
+
+
+@pytest.mark.parametrize(
+    ('source', 'variables', 'values', 'expected'),
+    [
+        pytest.param('pi', [], {}, math.pi, id='pi'),
+        pytest.param('2 * pi * r', ['r'], {'r': 1}, 2 * math.pi, id='constant-with-variable'),
+        pytest.param('log(e)', [], {}, 1.0, id='e'),
+        pytest.param('PI * x', ['PI', 'x'], {'PI': 2, 'x': 3}, 6, id='constants-are-case-sensitive'),
+    ],
+)
+def test_constants_need_no_declaration(source: str, variables: list[str], values: dict, expected: float):
+    assert Expression(source, variables).evaluate(values) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    'variables',
+    [
+        pytest.param(['x', 'pi'], id='pi'),
+        pytest.param(['e'], id='e'),
+    ],
+)
+def test_declaring_constant_raises(variables: list[str]):
+    with pytest.raises(ExpressionError):
+        Expression('x + 1', variables)
+
+
+def test_indexing_constant_raises_with_position():
+    with pytest.raises(ExpressionError) as exc_info:
+        Expression('2 * pi[0]', [])
+    assert exc_info.value.position == 4
+
+
+@pytest.mark.parametrize('var', ['e', 'pi', 'pi[0]'])
+def test_differentiate_with_respect_to_constant_raises(var: str):
+    with pytest.raises(ExpressionError):
+        Expression('e ^ x * pi', ['x']).differentiate(var)
+
+
+def test_differentiate_treats_constants_as_constants():
+    derivative = Expression('pi * x', ['x']).differentiate('x')
+
+    assert derivative.evaluate({'x': 5}) == pytest.approx(math.pi)

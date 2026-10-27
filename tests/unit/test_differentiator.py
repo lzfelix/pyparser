@@ -178,3 +178,35 @@ def test_unsupported_operator_raises():
 
 def test_unsupported_operator_without_var_is_constant():
     assert differentiate(_binary(_Y, '?', _int(1)), _X) == _ZERO
+
+
+@pytest.mark.parametrize(
+    'var',
+    [
+        pytest.param(ast.VariableNode('e'), id='e'),
+        pytest.param(ast.VariableNode('pi'), id='pi'),
+        pytest.param(ast.IndexedVariableNode('pi', 0), id='indexed-constant'),
+    ],
+)
+def test_differentiating_wrt_constant_raises(var: ast.Node):
+    with pytest.raises(DifferentiationError):
+        differentiate(_binary(var, '*', _X), var)
+
+
+@pytest.mark.parametrize('name', ['e', 'pi'])
+def test_constant_differentiates_to_zero(name: str):
+    assert differentiate(ast.VariableNode(name), _X) == _ZERO
+
+
+def test_uppercase_constant_name_is_a_variable():
+    E = ast.VariableNode('E')
+
+    assert differentiate(E, E) == _ONE
+
+
+def test_power_of_e_uses_constant_base_rule():
+    # e ^ x  ->  e ^ x * log(e) * 1
+    e = ast.VariableNode('e')
+    power = _binary(e, '^', _X)
+
+    assert differentiate(power, _X) == _binary(_binary(power, '*', _call('log', e)), '*', _ONE)

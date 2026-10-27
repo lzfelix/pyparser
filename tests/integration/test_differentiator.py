@@ -72,6 +72,13 @@ _Y = ast.VariableNode('y')
         pytest.param('x * sqrt(x)', _X, {'x': 2.0}, id='product-with-sqrt'),
         pytest.param('sqrt(sin(x) + 2)', _X, {'x': 0.7}, id='sqrt-of-function'),
 
+        # Constants
+        pytest.param('e ^ x', _X, {'x': 0.7}, id='exponential'),
+        pytest.param('e ^ (2 * x)', _X, {'x': 0.7}, id='exponential-of-expression'),
+        pytest.param('sin(pi * x)', _X, {'x': 0.3}, id='constant-inside-function'),
+        pytest.param('x ^ e', _X, {'x': 1.5}, id='constant-exponent'),
+        pytest.param('pi * x ^ 2 + e', _X, {'x': 1.5}, id='constants-as-coefficients'),
+
         # Partial derivatives
         pytest.param('x * y ^ 2', _X, {'x': 2.0, 'y': 3.0}, id='partial-wrt-x'),
         pytest.param('x * y ^ 2', _Y, {'x': 2.0, 'y': 3.0}, id='partial-wrt-y'),
@@ -95,6 +102,8 @@ def test_derivative_matches_numerical_derivative(expression: str, var: ast.Node,
         pytest.param('2 ^ x', '2 ^ x * log(2) * 1', id='constant-base'),
         pytest.param('sin(x ^ 2)', 'cos(x ^ 2) * (2 * x ^ (2 - 1) * 1)', id='chain-rule'),
         pytest.param('3 * x', '0 * x + 3 * 1', id='unsimplified-product'),
+        pytest.param('e ^ x', 'e ^ x * log(e) * 1', id='exponential'),
+        pytest.param('2 * pi', '0', id='constant-expression'),
     ],
 )
 def test_printed_derivative(expression: str, expected: str):
@@ -105,6 +114,20 @@ def test_derivative_can_be_differentiated_again():
     second = differentiate(differentiate(_parse('x ^ 3'), _X), _X)
 
     assert evaluator.evaluate(second, {'x': 2.0}) == pytest.approx(12.0)
+
+
+@pytest.mark.parametrize('x', [-2.0, 0.0, 0.5, 3.0])
+def test_derivative_of_exponential_is_itself(x: float):
+    tree = _parse('e ^ x')
+    derivative = differentiate(tree, _X)
+
+    assert evaluator.evaluate(derivative, {'x': x}) == pytest.approx(evaluator.evaluate(tree, {'x': x}))
+
+
+@pytest.mark.parametrize('name', ['e', 'pi'])
+def test_differentiating_wrt_constant_raises(name: str):
+    with pytest.raises(DifferentiationError):
+        differentiate(_parse(f'{name} * x'), ast.VariableNode(name))
 
 
 def test_unknown_function_reports_position():

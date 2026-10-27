@@ -1,4 +1,5 @@
 from pyparser import errors
+from pyparser.constants import CONSTANTS
 from pyparser.functions import BUILTINS
 from pyparser.operations.helpers import depends_on
 from pyparser.parser import ast
@@ -10,6 +11,8 @@ def differentiate(root: ast.Node, var: ast.VariableNode | ast.IndexedVariableNod
     Variables other than `var` are treated as constants, so this computes partial
     derivatives. The result is not simplified: `d/dx (3 * x)` gives `0 * x + 3 * 1`.
     """
+    if var.name in CONSTANTS:
+        raise errors.DifferentiationError(f'Cannot differentiate with respect to constant "{var.name}"')
 
     def _differentiate(node: ast.Node) -> ast.Node:
         if not depends_on(node, var):

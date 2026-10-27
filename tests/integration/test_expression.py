@@ -104,3 +104,17 @@ def test_gradient_descent_over_indexed_variable():
         weights = [weight - 0.1 * slope for weight, slope in zip(weights, slopes)]
 
     assert weights == pytest.approx([1, -2, 0.5])
+
+
+@pytest.mark.parametrize('order', [1, 2, 3, 4])
+@pytest.mark.parametrize('point', [-1.0, 0.0, 0.5, 2.0])
+def test_every_derivative_of_exp_is_itself(order: int, point: float):
+    derivative = Expression('e ^ x', ['x']).differentiate('x', order)
+
+    assert derivative.evaluate({'x': point}) == pytest.approx(math.exp(point))
+
+
+def test_derivative_of_sin_with_pi():
+    derivative = Expression('sin(pi * x)', ['x']).differentiate('x')
+
+    assert derivative.evaluate({'x': 0.25}) == pytest.approx(math.pi * math.cos(math.pi / 4))

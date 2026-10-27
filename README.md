@@ -109,6 +109,15 @@ g = Expression('x[0] * x[1] + y', ['x', 'y'])
 g.evaluate({'x': [2, 3], 'y': 1})    # 7
 ```
 
+Built-in constants are used without declaring them, and can't be declared, indexed or differentiated by:
+
+```python
+area = Expression('pi * r ^ 2', ['r'])
+area.evaluate({'r': 2})    # 12.566...
+
+Expression('e ^ x', ['x']).differentiate('x', order=3).evaluate({'x': 1})    # 2.718..., e ^ x
+```
+
 `differentiate(var, order=1)` returns the partial derivative as another `Expression` with the same declared variables, so it can be printed, evaluated, or differentiated again. `var` is a declared name (`'x'`) or an indexed one (`'x[1]'`):
 
 ```python
@@ -271,7 +280,7 @@ All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, 
 | `ParserError`     | Unexpected token, unclosed parenthesis, or incomplete expression |
 | `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), an index out of range, indexing a single value or using a sequence without an index, binding or indexing a constant (`e`, `pi`), or an unsupported operator or AST node |
 | `DifferentiationError` | Differentiating with respect to a constant, or an unknown function or unsupported operator in a subtree that depends on the variable |
-| `ExpressionError` | `Expression` misuse: an undeclared variable in the source (with its position), a duplicate or invalid declared name, missing or unknown values in `evaluate`, or an invalid variable or order in `differentiate` |
+| `ExpressionError` | `Expression` misuse: an undeclared variable in the source (with its position), a duplicate or invalid declared name, declaring or indexing a constant, missing or unknown values in `evaluate`, or an invalid variable, a constant or an invalid order in `differentiate` |
 
 ## Development
 

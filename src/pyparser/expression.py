@@ -1,6 +1,7 @@
 from collections.abc import Iterable, Mapping
 from typing import Self
 
+from pyparser.constants import CONSTANTS
 from pyparser.errors import ExpressionError, PyParserError
 from pyparser.lexer import tokenizer
 from pyparser.operations import evaluator, printer
@@ -100,6 +101,8 @@ class Expression:
 
     def _declared_variable(self, var: str) -> ast.VariableNode | ast.IndexedVariableNode:
         node = _parse_variable(var)
+        if node.name in CONSTANTS:
+            raise ExpressionError(f'Cannot differentiate with respect to constant "{node.name}"')
         if node.name not in self._variables:
             raise ExpressionError(f'Cannot differentiate with respect to undeclared variable "{var}"')
         return node
@@ -128,6 +131,11 @@ def _declare(variables: Iterable[str]) -> tuple[str, ...]:
         if not isinstance(_parse_variable(name), ast.VariableNode):
             raise ExpressionError(f'Declared variable "{name}" must be a plain name, without an index')
 
+    constants = [name for name in declared if name in CONSTANTS]
+    if constants:
+        names = ', '.join(f'"{name}"' for name in constants)
+        raise ExpressionError(f'Built-in constants cannot be declared as variables: {names}')
+
     duplicates = sorted({name for name in declared if declared.count(name) > 1})
     if duplicates:
         raise ExpressionError(f'Duplicate declaration of {_quoted(duplicates)}')
@@ -137,6 +145,10 @@ def _declare(variables: Iterable[str]) -> tuple[str, ...]:
 
 def _check_declared(tree: ast.Node, declared: tuple[str, ...]) -> None:
     for use in variable_uses(tree):
+        if use.name in CONSTANTS:
+            if isinstance(use, ast.IndexedVariableNode):
+                raise ExpressionError(f'Constant "{use.name}" cannot be indexed', position=use.position)
+            continue
         if use.name not in declared:
             raise ExpressionError(f'Undeclared variable "{use.name}"', position=use.position)
 

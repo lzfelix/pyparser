@@ -45,6 +45,9 @@ A name followed by `(` is a function call; otherwise it's a variable. Functions 
 | `cos(a)` | Cosine, `a` in radians      |
 | `tan(a)` | Tangent, `a` in radians     |
 | `log(a)` | Natural logarithm (base *e*) |
+| `sqrt(a)` | Square root, `a` non-negative |
+
+A function outside its domain, such as `log(0)` or `sqrt(-1)`, raises `EvaluationError`.
 
 ## Grammar
 
@@ -154,6 +157,9 @@ Rules applied, where `u` and `v` are subtrees and `'` marks their derivative:
 | `cos(u)` | `-sin(u) * u'` |
 | `tan(u)` | `1 / cos(u) ^ 2 * u'` |
 | `log(u)` | `1 / u * u'` |
+| `sqrt(u)` | `1 / (2 * sqrt(u)) * u'` |
+
+The derivative of `sqrt(u)` can't be evaluated where `u` is `0` (it divides by zero), matching its infinite slope there.
 
 ## Errors
 

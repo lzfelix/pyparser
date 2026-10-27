@@ -2,6 +2,7 @@ import numbers
 from collections.abc import Mapping, Sequence
 
 from pyparser import errors
+from pyparser.constants import CONSTANTS
 from pyparser.functions import BUILTINS
 from pyparser.parser import ast
 
@@ -11,6 +12,11 @@ type Value = int | float | Sequence[int | float]
 
 def evaluate(root: ast.Node, variables: Mapping[str, Value] | None = None) -> int | float:
     variables = variables or {}
+
+    bound_constants = [name for name in variables if name in CONSTANTS]
+    if bound_constants:
+        names = ', '.join(f'"{name}"' for name in bound_constants)
+        raise errors.EvaluationError(f'Built-in constants cannot be bound as variables: {names}')
 
     def _evaluate_unary(unary: ast.UnaryNode) -> int | float:
         match unary.operator:
@@ -27,6 +33,9 @@ def evaluate(root: ast.Node, variables: Mapping[str, Value] | None = None) -> in
         return variables[name]
 
     def _evaluate_variable(variable: ast.VariableNode) -> int | float:
+        if variable.name in CONSTANTS:
+            return CONSTANTS[variable.name]
+
         value = _lookup(variable.name, variable.position)
         if not isinstance(value, numbers.Number):
             raise errors.EvaluationError(
@@ -36,6 +45,12 @@ def evaluate(root: ast.Node, variables: Mapping[str, Value] | None = None) -> in
         return value
 
     def _evaluate_indexed_variable(variable: ast.IndexedVariableNode) -> int | float:
+        if variable.name in CONSTANTS:
+            raise errors.EvaluationError(
+                f'Constant "{variable.name}" cannot be indexed',
+                position=variable.position,
+            )
+
         values = _lookup(variable.name, variable.position)
         if isinstance(values, numbers.Number):
             raise errors.EvaluationError(

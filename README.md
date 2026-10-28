@@ -87,12 +87,12 @@ primary := NUMBER | VARIABLE | VARIABLE '[' INT ']' | FUN_NAME '(' expr ')' | '(
 
 ### Expressions
 
-`Expression` takes the source text and the names of its variables. It tokenizes and parses the source once, and checks that every variable it uses is declared:
+`Expression` takes the source text and parses it once. Its variables are the ones the source uses, in order of first appearance:
 
 ```python
 from pyparser import Expression
 
-f = Expression('x * sin(x) + y', variables=['x', 'y'])
+f = Expression('x * sin(x) + y')
 
 str(f)                          # 'x * sin(x) + y'
 f.variables                     # ('x', 'y')
@@ -100,47 +100,51 @@ f.evaluate({'x': 0, 'y': 2})    # 2.0
 f.evaluate({'x': 1, 'y': 0})    # 0.8414..., same expression, new values
 ```
 
-`evaluate` takes a mapping with a value for every declared variable, and nothing else; a missing or unknown name raises `ExpressionError`.
+`evaluate` takes a mapping with a value for every variable, and nothing else; a missing or unknown name raises `ExpressionError`.
 Names are passed in a mapping rather than as keyword arguments because names such as `if` or `class` are valid variables in an expression.
-Declaring `x` covers both `x` and indexed uses such as `x[0]`, which are bound to a sequence:
+Indexed uses such as `x[0]` and `x[1]` belong to the variable `x`, which is bound to a sequence:
 
 ```python
-g = Expression('x[0] * x[1] + y', ['x', 'y'])
+g = Expression('x[0] * x[1] + y')
+g.variables                          # ('x', 'y')
 g.evaluate({'x': [2, 3], 'y': 1})    # 7
 ```
 
-Built-in constants are used without declaring them, and can't be declared, indexed or differentiated by:
+Built-in constants aren't variables: they need no value, and can't be indexed or differentiated by:
 
 ```python
-area = Expression('pi * r ^ 2', ['r'])
+area = Expression('pi * r ^ 2')
+area.variables             # ('r',)
 area.evaluate({'r': 2})    # 12.566...
-
-Expression('e ^ x', ['x']).differentiate('x', order=3).evaluate({'x': 1})    # 2.718..., e ^ x
 ```
 
-`differentiate(var, order=1)` returns the partial derivative as another `Expression` with the same declared variables, so it can be printed, evaluated, or differentiated again. `var` is a declared name (`'x'`) or an indexed one (`'x[1]'`):
+`differentiate(var, order=1)` returns the partial derivative as another `Expression`, so it can be printed, evaluated, or differentiated again. `var` must be a variable of the expression, plain (`'x'`) or indexed (`'x[1]'`); anything else raises `ExpressionError`.
+A derivative keeps the variables of the expression it came from, even ones it no longer uses, so every derivative of a function is evaluated at the same points:
 
 ```python
 df = f.differentiate('x')
 str(df)                          # '1 * sin(x) + x * (cos(x) * 1) + 0'
+df.variables                     # ('x', 'y')
 df.evaluate({'x': 0, 'y': 5})    # 0.0, y must still be given
 
-g.differentiate('x[1]')          # Expression('0 * x[1] + x[0] * 1 + 0', variables=('x', 'y'))
+g.differentiate('x[1]')          # Expression('0 * x[1] + x[0] * 1 + 0')
+g.differentiate('x[2]')          # ExpressionError: x[2] is not a variable of the expression
 ```
 
 `order` gives higher-order derivatives, the same as differentiating repeatedly. Order `0` returns the expression itself; a negative or non-integer order raises `ExpressionError`:
 
 ```python
-cube = Expression('x ^ 3', ['x'])
+cube = Expression('x ^ 3')
 
 cube.differentiate('x', 2).evaluate({'x': 2})                     # 12  (6 * x)
 cube.differentiate('x').differentiate('x').evaluate({'x': 2})     # 12, same derivative
+Expression('e ^ x').differentiate('x', order=3).evaluate({'x': 1})    # 2.718..., e ^ x
 ```
 
-`gradient()` differentiates with respect to each declared variable, in declaration order. Indexed variables are listed explicitly, as in `g.gradient(['x[0]', 'x[1]', 'y'])`. For example, gradient descent:
+`gradient()` differentiates with respect to every variable, indexed ones included, in order of first appearance; `g.gradient()` gives the partials for `x[0]`, `x[1]` and `y`. A list such as `g.gradient(['y', 'x[0]'])` picks the variables and their order. For example, gradient descent:
 
 ```python
-f = Expression('(x - 3) ^ 2 + 2 * (y + 1) ^ 2', ['x', 'y'])
+f = Expression('(x - 3) ^ 2 + 2 * (y + 1) ^ 2')
 gradient = f.gradient()
 
 point = {'x': 0.0, 'y': 0.0}
@@ -151,7 +155,7 @@ for _ in range(50):
 point    # {'x': 2.99995..., 'y': -0.99999...}
 ```
 
-Expressions are immutable, and compare equal when they have the same tree and declared variables, regardless of spacing or redundant parentheses in the source.
+Expressions are immutable, and compare equal when they have the same tree and variables, regardless of spacing or redundant parentheses in the source.
 The parsed tree is available as `f.tree` for use with the lower-level functions below.
 
 ### Lower-level functions
@@ -280,7 +284,7 @@ All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, 
 | `ParserError`     | Unexpected token, unclosed parenthesis, or incomplete expression |
 | `EvaluationError` | Undefined variable or function, a function outside its domain (`log(0)`), an index out of range, indexing a single value or using a sequence without an index, binding or indexing a constant (`e`, `pi`), or an unsupported operator or AST node |
 | `DifferentiationError` | Differentiating with respect to a constant, or an unknown function or unsupported operator in a subtree that depends on the variable |
-| `ExpressionError` | `Expression` misuse: an undeclared variable in the source (with its position), a duplicate or invalid declared name, declaring or indexing a constant, missing or unknown values in `evaluate`, or an invalid variable, a constant or an invalid order in `differentiate` |
+| `ExpressionError` | `Expression` misuse: indexing a constant in the source (with its position), missing or unknown values in `evaluate`, or differentiating with respect to something that isn't a variable of the expression, or with an invalid order |
 
 ## Development
 

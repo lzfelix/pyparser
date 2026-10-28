@@ -17,7 +17,7 @@ from pyparser import Expression
     ],
 )
 def test_nth_derivative_of_power(order: int, expected: float):
-    derivative = Expression('x ^ 4', ['x']).differentiate('x', order)
+    derivative = Expression('x ^ 4').differentiate('x', order)
 
     assert derivative.evaluate({'x': 1.5}) == pytest.approx(expected)
 
@@ -34,7 +34,7 @@ def test_nth_derivative_of_power(order: int, expected: float):
 )
 @pytest.mark.parametrize('point', [-2.0, 0.0, 0.4, 3.0])
 def test_nth_derivative_of_sin(order: int, expected, point: float):
-    derivative = Expression('sin(x)', ['x']).differentiate('x', order)
+    derivative = Expression('sin(x)').differentiate('x', order)
 
     assert derivative.evaluate({'x': point}) == pytest.approx(expected(point))
 
@@ -48,40 +48,40 @@ def test_nth_derivative_of_sin(order: int, expected, point: float):
 )
 @pytest.mark.parametrize(('x', 'y'), [(1.0, 1.0), (2.0, -1.5), (-0.5, 3.0)])
 def test_mixed_partial_derivatives(first: str, second: str, x: float, y: float):
-    mixed = Expression('x ^ 2 * y ^ 3', ['x', 'y']).differentiate(first).differentiate(second)
+    mixed = Expression('x ^ 2 * y ^ 3').differentiate(first).differentiate(second)
 
     assert mixed.evaluate({'x': x, 'y': y}) == pytest.approx(6 * x * y ** 2)
 
 
 def test_mixed_partial_derivatives_of_indexed_variables():
-    mixed = Expression('x[0] ^ 3 * sin(x[1])', ['x']).differentiate('x[0]', 2).differentiate('x[1]')
+    mixed = Expression('x[0] ^ 3 * sin(x[1])').differentiate('x[0]', 2).differentiate('x[1]')
 
     assert mixed.evaluate({'x': [2.0, 0.5]}) == pytest.approx(6 * 2.0 * math.cos(0.5))
 
 
 def test_derivative_keeps_variables_it_no_longer_uses():
-    derivative = Expression('x + y', ['x', 'y']).differentiate('x')
+    derivative = Expression('x + y').differentiate('x')
 
     assert derivative.variables == ('x', 'y')
     assert derivative.evaluate({'x': 5, 'y': 7}) == 1
 
 
 def test_derivative_prints_and_round_trips():
-    derivative = Expression('x * sin(x)', ['x']).differentiate('x')
+    derivative = Expression('x * sin(x)').differentiate('x')
 
     assert str(derivative) == '1 * sin(x) + x * (cos(x) * 1)'
-    assert Expression(str(derivative), derivative.variables) == derivative
+    assert Expression(str(derivative)) == derivative
 
 
 def test_gradient_at_points():
-    gradient = Expression('x * y ^ 2 + sin(x)', ['x', 'y']).gradient()
+    gradient = Expression('x * y ^ 2 + sin(x)').gradient()
 
     assert [partial.evaluate({'x': 1, 'y': 2}) for partial in gradient] == pytest.approx([4 + math.cos(1), 4])
     assert [partial.evaluate({'x': 0, 'y': -1}) for partial in gradient] == pytest.approx([2, 0])
 
 
 def test_gradient_descent_converges():
-    function = Expression('(x - 3) ^ 2 + 2 * (y + 1) ^ 2', ['x', 'y'])
+    function = Expression('(x - 3) ^ 2 + 2 * (y + 1) ^ 2')
     gradient = function.gradient()
     point = {'x': 0.0, 'y': 0.0}
 
@@ -94,9 +94,8 @@ def test_gradient_descent_converges():
 
 
 def test_gradient_descent_over_indexed_variable():
-    function = Expression('(w[0] - 1) ^ 2 + (w[1] + 2) ^ 2 + (w[2] - 0.5) ^ 2', ['w'])
-    names = [f'w[{i}]' for i in range(3)]
-    gradient = function.gradient(names)
+    function = Expression('(w[0] - 1) ^ 2 + (w[1] + 2) ^ 2 + (w[2] - 0.5) ^ 2')
+    gradient = function.gradient()
     weights = [0.0, 0.0, 0.0]
 
     for _ in range(100):
@@ -109,12 +108,12 @@ def test_gradient_descent_over_indexed_variable():
 @pytest.mark.parametrize('order', [1, 2, 3, 4])
 @pytest.mark.parametrize('point', [-1.0, 0.0, 0.5, 2.0])
 def test_every_derivative_of_exp_is_itself(order: int, point: float):
-    derivative = Expression('e ^ x', ['x']).differentiate('x', order)
+    derivative = Expression('e ^ x').differentiate('x', order)
 
     assert derivative.evaluate({'x': point}) == pytest.approx(math.exp(point))
 
 
 def test_derivative_of_sin_with_pi():
-    derivative = Expression('sin(pi * x)', ['x']).differentiate('x')
+    derivative = Expression('sin(pi * x)').differentiate('x')
 
     assert derivative.evaluate({'x': 0.25}) == pytest.approx(math.pi * math.cos(math.pi / 4))

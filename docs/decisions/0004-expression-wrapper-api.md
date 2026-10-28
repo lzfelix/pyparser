@@ -5,34 +5,37 @@
 
 ## Context
 
-Using the library meant chaining modules by hand: `parser.parse(tokenizer.tokenize(source))`, then `evaluator.evaluate(tree, values)`, and `differentiate(tree, ast.VariableNode('x'))`, which takes a node the user has to build. Higher-order derivatives and gradients repeated this plumbing, and a typo in a variable name only surfaced at evaluation time, if that branch was ever evaluated.
+Using the library meant chaining modules by hand: `parser.parse(tokenizer.tokenize(source))`, then `evaluator.evaluate(tree, values)`, and `differentiate(tree, ast.VariableNode('x'))`, which takes a node the user has to build. Higher-order derivatives and gradients repeated this plumbing.
 
-We want users to give an expression as a string together with its variables, evaluate it at any point, and differentiate it, getting back something they can evaluate or differentiate again with the same interface.
+We want users to give an expression as a string, evaluate it at any point, and differentiate it, getting back something they can evaluate or differentiate again with the same interface.
 
 ## Decision
 
-Add `pyparser.Expression`, a class wrapping a parsed tree and its declared variables:
+Add `pyparser.Expression`, a class wrapping a parsed tree and the variables it uses:
 
 ```python
-f = Expression('x ^ 2 * y', variables=['x', 'y'])
+f = Expression('x ^ 2 * y')
+f.variables                                     # ('x', 'y')
 f.evaluate({'x': 3, 'y': 2})                    # 18
-f.differentiate('x', order=2)                   # Expression('...', variables=('x', 'y'))
+f.differentiate('x', order=2)                   # Expression('...')
 f.differentiate('x').differentiate('y').evaluate({'x': 3, 'y': 2})
 ```
 
-- **Parse once, validate early.** The constructor tokenizes and parses the source, and raises `ExpressionError` with the position of the first use of an undeclared variable. Declaring `x` covers both `x` and `x[i]`; duplicate declarations are rejected, unused ones allowed.
-- **Values are a mapping.** `evaluate(values)` requires exactly the declared variables.
-- **Derivatives are wrappers.** `differentiate(var, order)` parses `var` (`'x'` or `'x[1]'`) with the existing tokenizer and parser, applies `operations.differentiator.differentiate` `order` times, and wraps the resulting tree in a new `Expression` with the same declared variables, without re-parsing.
-- **Immutable and comparable.** Instances can't be modified, and compare and hash by `(tree, variables)`, so trees compare structurally as elsewhere.
+- **Variables come from the source.** The constructor tokenizes and parses the source once, and records the variables it uses, plain (`x`) or indexed (`x[1]`), in order of first appearance. `variables` lists their names; `x[0]` and `x[1]` both belong to `x`.
+- **Values are a mapping.** `evaluate(values)` requires a value for every variable and rejects unknown names, so typos in keys fail before evaluation starts.
+- **Only existing variables can be differentiated by.** `differentiate(var)` raises `ExpressionError` unless `var` is one of the recorded variables; for indexed variables the exact index must appear (`x[5]` is rejected when only `x[0]` and `x[1]` are used).
+- **Derivatives are wrappers.** `differentiate(var, order)` parses `var` (`'x'` or `'x[1]'`) with the existing tokenizer and parser, applies `operations.differentiator.differentiate` `order` times, and wraps the resulting tree in a new `Expression` that keeps the original's variables, without re-parsing.
+- **Immutable and comparable.** Instances can't be modified, and compare and hash by their tree and variables, so trees compare structurally as elsewhere.
 - **No behaviour moves into the AST.** The class only delegates to the existing operation functions (see [0001](0001-operations-use-pattern-matching-instead-of-visitors.md)); the lower-level functions remain public.
 
-The check for undeclared variables lives in one function, using the `helpers.variable_uses` operation. Built-in constants (`e`, `pi`, see ADR 0003) are skipped there: they need no declaration, can't be declared (the evaluator refuses to bind them, so such an expression could never be evaluated), can't be indexed, and can't be differentiated by. All three misuses raise `ExpressionError` up front.
+Variables are collected with the `helpers.variable_uses` operation. Built-in constants (`e`, `pi`, see ADR 0003) are not variables: they need no value, and indexing one or differentiating with respect to one raises `ExpressionError`.
 
 ## Consequences
 
 - **One import for common use.** Parsing, evaluating, printing and differentiating, including nth derivatives and gradients, go through one object.
-- **Errors move earlier.** Undeclared names fail at construction with a position, and missing or extra values fail before evaluation starts.
-- **Derivatives keep every declared variable**, even ones they no longer use (`d/dx (x + y)` is `1 + 0`), so they must still be given a value for `y`. This keeps every derivative of an expression interchangeable, such as the partials of a gradient evaluated at the same point.
+- **Nothing to declare.** The source alone defines the variables, so there is no list to keep in sync with it.
+- **Some typos surface later.** A misspelled variable in the source (`x * yy`) is only noticed when `evaluate` reports a missing value for `yy`, not at construction.
+- **Derivatives keep every variable of the original**, even ones they no longer use (`d/dx (x + y)` is `1 + 0`), so they must still be given a value for `y`, and can still be differentiated by `y`. This keeps every derivative of an expression interchangeable, such as the partials of a gradient evaluated at the same point.
 - **Two layers to document and maintain.** The wrapper must follow changes in the operations it delegates to.
 
 ## Alternatives considered
@@ -60,9 +63,16 @@ Build the derivative's `Expression` from `printer.to_string(derivative_tree)`, g
 
 Rejected.
 
-### Inferring variables from the source
+### Declaring variables when constructing: `Expression(source, variables)`
 
-- **For:** nothing to declare.
-- **Against:** a typo becomes a new variable instead of an error, and the declared order, which gives the order of `gradient()` and of the user's values, would depend on where names first appear.
+- **For:** a misspelled variable fails at construction, with its position; the declared order fixes the order of `gradient()`; a function can have variables it doesn't use (`f(x, y) = x ^ 2`).
+- **Against:** it repeats what the source already says, while values must be passed to `evaluate` anyway. Misspellings are still caught when evaluating, as missing values; `gradient(variables)` picks an order when needed; and derivatives already keep variables they no longer use.
+
+Rejected.
+
+### Ignoring unknown values in `evaluate`
+
+- **For:** a single point with extra entries could be passed to any expression.
+- **Against:** a misspelled key would be silently ignored. Since derivatives keep the original's variables, every partial of a gradient already accepts the same point.
 
 Rejected.

@@ -3,7 +3,7 @@ from pyparser import Expression
 
 def _evaluation_demo() -> None:
     source = '2 + 3*cos(5^0 - 1) + sin(21)^2 + cos(44/2 - (3-2))^2'
-    expression = Expression(source, variables=[])
+    expression = Expression(source)
 
     print(f'Original expression: {source}')
     print(f'Evaluated: {expression.evaluate({})}')
@@ -11,7 +11,7 @@ def _evaluation_demo() -> None:
 
 
 def _gradient_descent_demo() -> None:
-    function = Expression('(x - 3) ^ 2 + 2 * (y + 1) ^ 2', variables=['x', 'y'])
+    function = Expression('(x - 3) ^ 2 + 2 * (y + 1) ^ 2')
     gradient = function.gradient()
     learning_rate = 0.1
     steps = 50

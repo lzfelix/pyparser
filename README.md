@@ -1,13 +1,13 @@
 # pyparser
 
-A small arithmetic expression parser, evaluator, pretty-printer and symbolic differentiator written in pure Python.
+A small arithmetic expression parser, evaluator, pretty-printer, symbolic differentiator and simplifier written in pure Python.
 
-Expressions are tokenized and parsed into a tree, which can then be evaluated, printed or differentiated:
+Expressions are tokenized and parsed into a tree, which can then be evaluated, printed, differentiated or simplified:
 
 ```
                                                       ┌─ evaluate(variables) ─▶  8.5
 "2 * x + y"  ─ tokenize ─▶  list[Token]  ─ parse ─▶  AST ── to_string ─▶  "2 * x + y"
-                                                      └─ differentiate(x) ─▶  AST of "0 * x + 2 * 1 + 0"
+                                                      └─ differentiate(x) ─▶  AST of "0 * x + 2 * 1 + 0"  ─ simplify ─▶  AST of "2"
 ```
 
 `Expression` wraps these steps in a single object; see [Usage](#usage).
@@ -118,16 +118,16 @@ area.variables             # ('r',)
 area.evaluate({'r': 2})    # 12.566...
 ```
 
-`differentiate(var, order=1)` returns the partial derivative as another `Expression`, so it can be printed, evaluated, or differentiated again. `var` must be a variable of the expression, plain (`'x'`) or indexed (`'x[1]'`); anything else raises `ExpressionError`.
+`differentiate(var, order=1)` returns the partial derivative as another `Expression`, [simplified](#simplification), so it can be printed, evaluated, or differentiated again. `var` must be a variable of the expression, plain (`'x'`) or indexed (`'x[1]'`); anything else raises `ExpressionError`.
 A derivative keeps the variables of the expression it came from, even ones it no longer uses, so every derivative of a function is evaluated at the same points:
 
 ```python
 df = f.differentiate('x')
-str(df)                          # '1 * sin(x) + x * (cos(x) * 1) + 0'
+str(df)                          # 'sin(x) + x * cos(x)'
 df.variables                     # ('x', 'y')
 df.evaluate({'x': 0, 'y': 5})    # 0.0, y must still be given
 
-g.differentiate('x[1]')          # Expression('0 * x[1] + x[0] * 1 + 0')
+g.differentiate('x[1]')          # Expression('x[0]')
 g.differentiate('x[2]')          # ExpressionError: x[2] is not a variable of the expression
 ```
 
@@ -136,7 +136,8 @@ g.differentiate('x[2]')          # ExpressionError: x[2] is not a variable of th
 ```python
 cube = Expression('x ^ 3')
 
-cube.differentiate('x', 2).evaluate({'x': 2})                     # 12  (6 * x)
+cube.differentiate('x', 2)                                        # Expression('3 * (2 * x)')
+cube.differentiate('x', 2).evaluate({'x': 2})                     # 12
 cube.differentiate('x').differentiate('x').evaluate({'x': 2})     # 12, same derivative
 Expression('e ^ x').differentiate('x', order=3).evaluate({'x': 1})    # 2.718..., e ^ x
 ```
@@ -157,6 +158,29 @@ point    # {'x': 2.99995..., 'y': -0.99999...}
 
 Expressions are immutable. The parsed tree is available as `f.tree` for use with the lower-level functions below.
 
+#### Simplification
+
+Derivatives and gradients are simplified after each order, so higher-order derivatives stay small. `simplify()` does the same for any expression, keeping its variables; the expression built from a source keeps what was written:
+
+```python
+h = Expression('2 * 3 * x ^ 1 + 0 * y')
+
+str(h)               # '2 * 3 * x ^ 1 + 0 * y'
+str(h.simplify())    # '6 * x'
+h.simplify().variables    # ('x', 'y'), y is no longer used but is still a variable
+```
+
+The simplifier only applies local rules: it computes `+`, `-`, `*` and `^` between numbers, and removes terms that don't change the result, such as `x + 0`, `x * 1`, `x ^ 1`, `x * 0`, `x ^ 0` and `-(-x)`.
+See [ADR 0005](docs/decisions/0005-local-rewrite-simplifier.md) for the reasoning. It has these limitations:
+
+- **No like terms or reordering.** `x + x`, `x - x`, `x * x`, `3 * (2 * x)` and `2 * x * 3` are kept as they are. The third derivative of `x * sin(x)` prints as `-sin(x) + (-sin(x) + (-sin(x) + x * -cos(x)))`, not `-3 * sin(x) - x * cos(x)`, and signs like `x * -y` aren't moved.
+- **Results aren't canonical.** Equality still compares structure, so `x + 1` and `1 + x` are different even after simplifying.
+- **Only arithmetic on numbers is computed.** Functions and constants stay symbolic, so `cos(0)` and `log(e)` are kept; each derivative of `e ^ x` adds a factor of `log(e)`, which evaluates to `1`.
+- **Some arithmetic is kept.** Division isn't computed, so fractions stay exact (`1 / 3`, and also `4 / 2`). Neither are powers with an exponent above 64 in absolute value, nor operations that would fail or not give a real, finite number, such as `0 ^ -1` or `(-8) ^ 0.5`; those are left for `evaluate` to report.
+- **Numbers are computed in floating point**, as when evaluating: `0.1 + 0.2` becomes `0.30000000000000004`, and a result printed in scientific notation, such as `1e+20`, can't be parsed back.
+- **Some errors disappear.** `0 * u`, `0 / u`, `u ^ 0` and `1 ^ u` drop `u`, so `Expression('0 * log(x)').simplify()` evaluates to `0` at `x = 0` instead of raising. Simplifying never changes a value the original computes; it can only give a value where the original raised.
+- **Integers and floats can swap.** `x / 1` simplifies to `x`, so it evaluates to `2` rather than `2.0` for `x = 2`.
+
 #### Comparing expressions
 
 Expressions support `==` and can be hashed, so they work as set members and dictionary keys. Two expressions are equal when they have the same tree and the same variables, regardless of spacing or redundant parentheses in the source:
@@ -171,7 +195,7 @@ cube.differentiate('x', 2) == cube.differentiate('x').differentiate('x')    # Tr
 ```
 
 Equality compares structure, not mathematical meaning: `x + y` and `y + x` are different trees, and so are `x * 2` and `2 * x`, so they aren't equal.
-A derivative also keeps the variables of the expression it came from, so `Expression('x + y').differentiate('x')` prints as `1 + 0` but isn't equal to `Expression('1 + 0')`, which has no variables.
+A derivative also keeps the variables of the expression it came from, so `Expression('x + y').differentiate('x')` prints as `1` but isn't equal to `Expression('1')`, which has no variables.
 Expressions can't be ordered: `<` and `>` raise `TypeError`.
 
 ### Lower-level functions
@@ -228,7 +252,7 @@ printer.to_string(derivative)               # '1 * sin(x) + x * (cos(x) * 1)'
 evaluator.evaluate(derivative, {'x': 0})    # 0.0
 ```
 
-Results are correct but not simplified: `2 * x + y` differentiates to `0 * x + 2 * 1 + 0`.
+Results are correct but not simplified: `2 * x + y` differentiates to `0 * x + 2 * 1 + 0`. See [Simplifying](#simplifying) to clean them up.
 
 Variables other than `var` are treated as constants, so this computes partial derivatives. Indexed variables are separate variables, so `x`, `x[0]` and `x[1]` are all independent:
 
@@ -255,6 +279,7 @@ evaluator.evaluate(second, {'x': 2})    # 12  (6 * x)
 ```
 
 Without simplification, each repeated differentiation makes the tree noticeably larger.
+`Expression` simplifies after each order to avoid this.
 
 Exponentials follow the constant-base rule below. `log(e)` isn't simplified away, but evaluates to `1`, so the derivative of `e ^ x` evaluates to `e ^ x`:
 
@@ -289,6 +314,19 @@ Rules applied, where `u` and `v` are subtrees and `'` marks their derivative:
 | `sqrt(u)` | `1 / (2 * sqrt(u)) * u'` |
 
 The derivative of `sqrt(u)` can't be evaluated where `u` is `0` (it divides by zero), matching its infinite slope there.
+
+#### Simplifying
+
+`simplify(tree)` returns an equivalent tree, with the [rules and limitations](#simplification) described for `Expression`:
+
+```python
+from pyparser.operations.simplifier import simplify
+
+tree = parser.parse(tokenizer.tokenize('x * sin(x)'))
+printer.to_string(simplify(differentiate(tree, ast.VariableNode('x'))))    # 'sin(x) + x * cos(x)'
+```
+
+Like the other operations, it never modifies its input. Simplifying twice gives the same tree as simplifying once, and the printed result parses back into the same tree, as long as no number in it is printed in scientific notation.
 
 ## Errors
 

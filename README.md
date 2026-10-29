@@ -340,6 +340,17 @@ All errors subclass `pyparser.errors.PyParserError`, which has a `message` and, 
 | `DifferentiationError` | Differentiating with respect to a constant, or an unknown function or unsupported operator in a subtree that depends on the variable |
 | `ExpressionError` | `Expression` misuse: indexing a constant in the source (with its position), missing or unknown values in `evaluate`, or differentiating with respect to something that isn't a variable of the expression, or with an invalid order |
 
+## Possible next steps
+
+Ideas for extending the project, in no particular order. None of them is planned for now.
+
+- **A stronger simplifier:** combine like terms and coefficients, so `3 * (2 * x)` becomes `6 * x` and `x + x` becomes `2 * x`, and compute exact function values such as `log(e)` and `cos(0)`. [ADR 0005](docs/decisions/0005-local-rewrite-simplifier.md) lists what the current simplifier leaves out.
+- **More functions:** such as `exp`, `abs`, and the inverse trigonometric functions, each with its derivative.
+- **Errors that point at the source:** show the expression with a caret under the position where it went wrong, which errors already record.
+- **Symbolic integration:** considerably harder than differentiation, since integrals have no rule that always applies, and some have no closed form at all.
+- **A LaTeX printer:** print `x ^ 2 / 2` as `\frac{x^{2}}{2}`.
+- **A web front-end:** embed the library in a page or a server to type an expression and see it evaluated, differentiated, simplified and plotted, in the spirit of early-2010s Wolfram|Alpha.
+
 ## Development
 
 Requires Python 3.14+ and [uv](https://docs.astral.sh/uv/).

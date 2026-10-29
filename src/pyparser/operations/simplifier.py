@@ -16,7 +16,8 @@ _MAX_FOLDED_EXPONENT = 64
 
 
 def simplify(root: ast.Node) -> ast.Node:
-    """Builds an equivalent tree with arithmetic on numbers already computed.
+    """Builds an equivalent tree with arithmetic on numbers already computed, and terms that
+    don't change the result removed: `x * 1 + 0 * y` simplifies to `x`.
 
     Function calls and constants are kept symbolic, so `log(2)` and `2 * pi` are left as they are.
     Negative numbers are written as a negated positive number, as the parser reads them, so a
@@ -41,6 +42,14 @@ def _simplify_unary(sign: str, u: ast.Node, position: int | None) -> ast.Node:
     value = _value(u)
     if sign in ('+', '-') and value is not None:
         return _number(value if sign == '+' else -value, position)
+
+    match sign, u:
+        # +u = u
+        case '+', _:
+            return u
+        # -(-u) = u
+        case '-', ast.UnaryNode(operator='-', expr=w):
+            return w
     return ast.UnaryNode(sign, u, position=position)
 
 
@@ -48,6 +57,41 @@ def _simplify_binary(u: ast.Node, op: str, v: ast.Node, position: int | None) ->
     folded = _fold(_value(u), op, _value(v))
     if folded is not None:
         return _number(folded, position)
+
+    a, b = _value(u), _value(v)
+    match op:
+        case '+':
+            # 0 + v = v,  u + 0 = u
+            if a == 0:
+                return v
+            if b == 0:
+                return u
+        case '-':
+            # u - 0 = u,  0 - v = -v
+            if b == 0:
+                return u
+            if a == 0:
+                return _simplify_unary('-', v, position)
+        case '*':
+            # 0 * v = u * 0 = 0,  1 * v = v,  u * 1 = u
+            if a == 0 or b == 0:
+                return _number(0, position)
+            if a == 1:
+                return v
+            if b == 1:
+                return u
+        case '/':
+            # u / 1 = u,  0 / v = 0 unless v is the number 0
+            if b == 1:
+                return u
+            if a == 0 and b != 0:
+                return _number(0, position)
+        case '^':
+            # u ^ 0 = 1 ^ v = 1,  u ^ 1 = u
+            if b == 0 or a == 1:
+                return _number(1, position)
+            if b == 1:
+                return u
     return ast.BinaryNode(u, op, v, position=position)
 
 

@@ -121,6 +121,7 @@ def test_simplify(tree: ast.Node, expected: ast.Node):
         pytest.param(_binary(_int(0), '^', _neg(_int(1))), id='zero-to-negative-power'),
         pytest.param(_binary(_neg(_int(8)), '^', ast.NumberNode(0.5)), id='complex-result'),
         pytest.param(_binary(ast.NumberNode(1e300), '^', _int(2)), id='overflow'),
+        pytest.param(_binary(ast.NumberNode(1e300), '*', ast.NumberNode(1e300)), id='infinite-result'),
         pytest.param(_binary(_int(9), '^', _int(65)), id='exponent-over-limit'),
         pytest.param(_binary(_X, '%', _int(2)), id='unknown-operator'),
     ],

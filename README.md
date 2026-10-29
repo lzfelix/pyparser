@@ -155,8 +155,24 @@ for _ in range(50):
 point    # {'x': 2.99995..., 'y': -0.99999...}
 ```
 
-Expressions are immutable, and compare equal when they have the same tree and variables, regardless of spacing or redundant parentheses in the source.
-The parsed tree is available as `f.tree` for use with the lower-level functions below.
+Expressions are immutable. The parsed tree is available as `f.tree` for use with the lower-level functions below.
+
+#### Comparing expressions
+
+Expressions support `==` and can be hashed, so they work as set members and dictionary keys. Two expressions are equal when they have the same tree and the same variables, regardless of spacing or redundant parentheses in the source:
+
+```python
+Expression('x+1') == Expression('(x) + 1')    # True
+
+cube = Expression('x ^ 3')
+cube.differentiate('x', 2) == cube.differentiate('x').differentiate('x')    # True
+
+{Expression('x+1'), Expression('x + 1'), Expression('x + 2')}    # 2 distinct expressions
+```
+
+Equality compares structure, not mathematical meaning: `x + y` and `y + x` are different trees, and so are `x * 2` and `2 * x`, so they aren't equal.
+A derivative also keeps the variables of the expression it came from, so `Expression('x + y').differentiate('x')` prints as `1 + 0` but isn't equal to `Expression('1 + 0')`, which has no variables.
+Expressions can't be ordered: `<` and `>` raise `TypeError`.
 
 ### Lower-level functions
 

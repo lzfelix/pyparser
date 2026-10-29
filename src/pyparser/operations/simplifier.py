@@ -1,3 +1,4 @@
+import math
 import operator
 
 from pyparser.parser import ast
@@ -106,8 +107,11 @@ def _fold(a: int | float | None, op: str, b: int | float | None) -> int | float 
         result = _FOLDABLE[op](a, b)
     except ArithmeticError:
         return None
-    # A negative base with a fractional exponent gives a complex number
-    return None if isinstance(result, complex) else result
+    # A negative base with a fractional exponent gives a complex number, and float overflow
+    # gives inf instead of raising; neither can be written back as a number
+    if isinstance(result, complex) or not math.isfinite(result):
+        return None
+    return result
 
 
 def _value(node: ast.Node) -> int | float | None:

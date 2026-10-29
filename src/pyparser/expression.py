@@ -16,8 +16,8 @@ type Variable = ast.VariableNode | ast.IndexedVariableNode
 class Expression:
     """An arithmetic expression, parsed once from its source.
 
-    Its variables are the ones its source uses, plain (`x`) or indexed (`x[0]`), in order of
-    first appearance; built-in constants are not variables. Expressions are immutable:
+    Its variables are the ones its source uses, plain (`x`) or indexed (`x[0]`), sorted by
+    name and then index; built-in constants are not variables. Expressions are immutable:
     differentiating returns a new `Expression` that keeps the variables of the original, so
     every derivative can be evaluated at the same point and differentiated again.
     """
@@ -49,7 +49,7 @@ class Expression:
 
     @property
     def variables(self) -> tuple[str, ...]:
-        """Names of the variables, in order of first appearance; `x[0]` and `x[1]` both count as `x`."""
+        """Names of the variables, sorted; `x[0]` and `x[1]` both count as `x`."""
         return tuple(dict.fromkeys(use.name for use in self._uses))
 
     @property
@@ -89,18 +89,11 @@ class Expression:
             tree = differentiate(tree, target)
         return Expression._from_tree(tree, self._uses)
 
-    def gradient(self, variables: Iterable[str] | None = None) -> tuple[Expression, ...]:
-        """Builds the first partial derivative with respect to each of `variables`.
-
-        Defaults to every variable of the expression, indexed ones included, in order of
-        first appearance.
+    def gradient(self) -> tuple[Expression, ...]:
+        """Builds the first partial derivative with respect to every variable, indexed ones
+        included, in the same sorted order as `variables`.
         """
-        if isinstance(variables, str):
-            raise ExpressionError(f'Variables must be a collection of names, not the string {variables!r}')
-
-        if variables is None:
-            return tuple(Expression._from_tree(differentiate(self._tree, use), self._uses) for use in self._uses)
-        return tuple(self.differentiate(name) for name in variables)
+        return tuple(Expression._from_tree(differentiate(self._tree, use), self._uses) for use in self._uses)
 
     def _variable(self, var: str) -> Variable:
         node = _parse_variable(var)
@@ -133,7 +126,16 @@ def _variables_of(tree: ast.Node) -> tuple[Variable, ...]:
                 raise ExpressionError(f'Constant "{use.name}" cannot be indexed', position=use.position)
             continue
         uses.append(use)
-    return tuple(dict.fromkeys(uses))
+    return tuple(sorted(dict.fromkeys(uses), key=_sort_key))
+
+
+def _sort_key(use: Variable) -> tuple[str, int]:
+    # Plain `x` sorts before `x[0]`; indices compare as numbers, so `x[2]` precedes `x[10]`
+    match use:
+        case ast.IndexedVariableNode(name=name, index=index):
+            return name, index
+        case ast.VariableNode(name=name):
+            return name, -1
 
 
 def _parse_variable(text: str) -> Variable:

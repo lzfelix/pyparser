@@ -87,7 +87,7 @@ primary := NUMBER | VARIABLE | VARIABLE '[' INT ']' | FUN_NAME '(' expr ')' | '(
 
 ### Expressions
 
-`Expression` takes the source text and parses it once. Its variables are the ones the source uses, in order of first appearance:
+`Expression` takes the source text and parses it once. Its variables are the ones the source uses, sorted by name:
 
 ```python
 from pyparser import Expression
@@ -141,7 +141,7 @@ cube.differentiate('x').differentiate('x').evaluate({'x': 2})     # 12, same der
 Expression('e ^ x').differentiate('x', order=3).evaluate({'x': 1})    # 2.718..., e ^ x
 ```
 
-`gradient()` differentiates with respect to every variable, indexed ones included, in order of first appearance; `g.gradient()` gives the partials for `x[0]`, `x[1]` and `y`. A list such as `g.gradient(['y', 'x[0]'])` picks the variables and their order. For example, gradient descent:
+`gradient()` differentiates with respect to every variable, indexed ones included, sorted by name and then by index, matching `variables`: `g.gradient()` gives the partials for `x[0]`, `x[1]` and `y`, in that order. For example, gradient descent:
 
 ```python
 f = Expression('(x - 3) ^ 2 + 2 * (y + 1) ^ 2')

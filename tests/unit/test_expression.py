@@ -24,7 +24,7 @@ def test_is_exported_from_package():
         pytest.param('x * y', ast.BinaryNode(_X, '*', _Y), ('x', 'y'), id='plain-variables'),
         pytest.param('x[0]', ast.IndexedVariableNode('x', 0), ('x',), id='indexed-variable'),
         pytest.param('sin(x)', ast.FunctionCallNode('sin', _X), ('x',), id='function-name-is-not-a-variable'),
-        pytest.param('if + class', ast.BinaryNode(ast.VariableNode('if'), '+', ast.VariableNode('class')), ('if', 'class'), id='python-keywords'),
+        pytest.param('if + class', ast.BinaryNode(ast.VariableNode('if'), '+', ast.VariableNode('class')), ('class', 'if'), id='python-keywords'),
     ],
 )
 def test_construction(source: str, expected_tree: ast.Node, expected_variables: tuple[str, ...]):
@@ -37,7 +37,8 @@ def test_construction(source: str, expected_tree: ast.Node, expected_variables: 
 @pytest.mark.parametrize(
     ('source', 'expected'),
     [
-        pytest.param('b + a', ('b', 'a'), id='order-of-first-appearance'),
+        pytest.param('b + a', ('a', 'b'), id='sorted-by-name'),
+        pytest.param('y * x', ('x', 'y'), id='not-in-order-of-appearance'),
         pytest.param('x * y + x ^ 2', ('x', 'y'), id='repeated-variable-listed-once'),
         pytest.param('x[1] + y + x[0]', ('x', 'y'), id='indexed-uses-listed-by-name'),
         pytest.param('2 * pi * r + e', ('r',), id='constants-are-not-variables'),
@@ -239,36 +240,26 @@ def test_differentiate_treats_constants_as_constants():
     assert Expression('pi * x').differentiate('x').evaluate({'x': 5}) == pytest.approx(math.pi)
 
 
-def test_gradient_defaults_to_every_variable_in_order_of_appearance():
-    expression = Expression('y * x[1] + x[0]')
+def test_gradient_covers_every_variable_sorted_by_name_then_index():
+    expression = Expression('y * x[10] + x[2] + w')
 
     assert expression.gradient() == (
+        expression.differentiate('w'),
+        expression.differentiate('x[2]'),
+        expression.differentiate('x[10]'),
         expression.differentiate('y'),
-        expression.differentiate('x[1]'),
-        expression.differentiate('x[0]'),
     )
 
 
-def test_gradient_with_explicit_variables():
-    expression = Expression('x[0] * x[1] + y')
+def test_gradient_matches_variables_order():
+    expression = Expression('y ^ 2 + 3 * x')
 
-    assert expression.gradient(['x[1]', 'y']) == (expression.differentiate('x[1]'), expression.differentiate('y'))
+    assert expression.variables == ('x', 'y')
+    assert [partial.evaluate({'x': 1, 'y': 5}) for partial in expression.gradient()] == [3, 10]
 
 
 def test_gradient_of_no_variables_is_empty():
     assert Expression('3').gradient() == ()
-
-
-@pytest.mark.parametrize(
-    'variables',
-    [
-        pytest.param('x', id='string-instead-of-collection'),
-        pytest.param(['z'], id='not-a-variable'),
-    ],
-)
-def test_gradient_invalid_variables_raise(variables):
-    with pytest.raises(ExpressionError):
-        Expression('x').gradient(variables)
 
 
 @pytest.mark.parametrize(

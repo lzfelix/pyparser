@@ -21,7 +21,8 @@ f.differentiate('x', order=2)                   # Expression('...')
 f.differentiate('x').differentiate('y').evaluate({'x': 3, 'y': 2})
 ```
 
-- **Variables come from the source.** The constructor tokenizes and parses the source once, and records the variables it uses, plain (`x`) or indexed (`x[1]`), in order of first appearance. `variables` lists their names; `x[0]` and `x[1]` both belong to `x`.
+- **Variables come from the source.** The constructor tokenizes and parses the source once, and records the variables it uses, plain (`x`) or indexed (`x[1]`), sorted by name and then by index, as is usual in mathematics. `variables` lists their names; `x[0]` and `x[1]` both belong to `x`.
+- **The gradient covers every variable.** `gradient()` takes no arguments and returns one partial derivative per variable, in the same sorted order, so it lines up with `variables`.
 - **Values are a mapping.** `evaluate(values)` requires a value for every variable and rejects unknown names, so typos in keys fail before evaluation starts.
 - **Only existing variables can be differentiated by.** `differentiate(var)` raises `ExpressionError` unless `var` is one of the recorded variables; for indexed variables the exact index must appear (`x[5]` is rejected when only `x[0]` and `x[1]` are used).
 - **Derivatives are wrappers.** `differentiate(var, order)` parses `var` (`'x'` or `'x[1]'`) with the existing tokenizer and parser, applies `operations.differentiator.differentiate` `order` times, and wraps the resulting tree in a new `Expression` that keeps the original's variables, without re-parsing.
@@ -65,8 +66,15 @@ Rejected.
 
 ### Declaring variables when constructing: `Expression(source, variables)`
 
-- **For:** a misspelled variable fails at construction, with its position; the declared order fixes the order of `gradient()`; a function can have variables it doesn't use (`f(x, y) = x ^ 2`).
-- **Against:** it repeats what the source already says, while values must be passed to `evaluate` anyway. Misspellings are still caught when evaluating, as missing values; `gradient(variables)` picks an order when needed; and derivatives already keep variables they no longer use.
+- **For:** a misspelled variable fails at construction, with its position; the declared order could differ from alphabetical; a function can have variables it doesn't use (`f(x, y) = x ^ 2`).
+- **Against:** it repeats what the source already says, while values must be passed to `evaluate` anyway. Misspellings are still caught when evaluating, as missing values; sorted names give a predictable order; and derivatives already keep variables they no longer use.
+
+Rejected.
+
+### Choosing the variables of `gradient(variables)`
+
+- **For:** a custom order, or a gradient over a subset, such as a model's weights but not its data.
+- **Against:** the gradient is the vector of partials with respect to every variable; a subset or another order is a list comprehension over `differentiate`.
 
 Rejected.
 

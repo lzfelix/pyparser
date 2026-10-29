@@ -40,14 +40,12 @@ def simplify(root: ast.Node) -> ast.Node:
 
 
 def _simplify_unary(sign: str, u: ast.Node, position: int | None) -> ast.Node:
-    value = _value(u)
-    if sign in ('+', '-') and value is not None:
-        return _number(value if sign == '+' else -value, position)
-
     match sign, u:
         # +u = u
         case '+', _:
             return u
+        case '-', _ if (value := _maybe_extract_number(u)) is not None:
+            return _number(-value, position)
         # -(-u) = u
         case '-', ast.UnaryNode(operator='-', expr=w):
             return w
@@ -55,11 +53,11 @@ def _simplify_unary(sign: str, u: ast.Node, position: int | None) -> ast.Node:
 
 
 def _simplify_binary(u: ast.Node, op: str, v: ast.Node, position: int | None) -> ast.Node:
-    folded = _fold(_value(u), op, _value(v))
+    a, b = _maybe_extract_number(u), _maybe_extract_number(v)
+    folded = _fold(a, op, b)
     if folded is not None:
         return _number(folded, position)
 
-    a, b = _value(u), _value(v)
     match op:
         case '+':
             # 0 + v = v,  u + 0 = u
@@ -114,7 +112,7 @@ def _fold(a: int | float | None, op: str, b: int | float | None) -> int | float 
     return result
 
 
-def _value(node: ast.Node) -> int | float | None:
+def _maybe_extract_number(node: ast.Node) -> int | float | None:
     match node:
         case ast.NumberNode(value=value):
             return value

@@ -10,3 +10,4 @@ Each record is a numbered file that is never renumbered. When a decision changes
 | [0002](0002-symbolic-differentiation-instead-of-dual-numbers.md) | Symbolic differentiation instead of dual numbers | Accepted |
 | [0003](0003-constants-are-resolved-at-evaluation-time.md) | Constants are resolved at evaluation time | Accepted |
 | [0004](0004-expression-wrapper-api.md) | An immutable `Expression` wrapper as the user-facing API | Accepted |
+| [0005](0005-local-rewrite-simplifier.md) | A local-rewrite simplifier, without a normal form | Accepted |

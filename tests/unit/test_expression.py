@@ -114,15 +114,14 @@ def test_differentiate_returns_new_expression():
 
     assert isinstance(derivative, Expression)
     assert derivative is not expression
-    assert derivative.tree == ast.BinaryNode(
-        ast.BinaryNode(ast.NumberNode(1), '*', _Y), '+', ast.BinaryNode(_X, '*', ast.NumberNode(0)))
+    assert derivative.tree == _Y
     assert expression.tree == ast.BinaryNode(_X, '*', _Y)
 
 
 def test_derivative_keeps_the_variables_of_the_original():
     derivative = Expression('x + y').differentiate('x')
 
-    assert str(derivative) == '1 + 0'
+    assert str(derivative) == '1'
     assert derivative.variables == ('x', 'y')
     assert derivative.evaluate({'x': 2, 'y': 3}) == 1
     assert str(derivative.differentiate('y')) == '0'
@@ -131,8 +130,8 @@ def test_derivative_keeps_the_variables_of_the_original():
 @pytest.mark.parametrize(
     ('var', 'expected'),
     [
-        pytest.param('x', '1 * y + x * 0', id='plain'),
-        pytest.param('y', '0 * y + x * 1', id='other-plain'),
+        pytest.param('x', 'y', id='plain'),
+        pytest.param('y', 'x', id='other-plain'),
     ],
 )
 def test_differentiate_plain_variables(var: str, expected: str):
@@ -142,9 +141,9 @@ def test_differentiate_plain_variables(var: str, expected: str):
 @pytest.mark.parametrize(
     ('var', 'expected'),
     [
-        pytest.param('x[0]', '1 * x[1] + x[0] * 0', id='first-index'),
-        pytest.param('x[1]', '0 * x[1] + x[0] * 1', id='second-index'),
-        pytest.param(' x [ 1 ] ', '0 * x[1] + x[0] * 1', id='whitespace'),
+        pytest.param('x[0]', 'x[1]', id='first-index'),
+        pytest.param('x[1]', 'x[0]', id='second-index'),
+        pytest.param(' x [ 1 ] ', 'x[0]', id='whitespace'),
     ],
 )
 def test_differentiate_indexed_variables(var: str, expected: str):
@@ -260,6 +259,35 @@ def test_gradient_matches_variables_order():
 
 def test_gradient_of_no_variables_is_empty():
     assert Expression('3').gradient() == ()
+
+
+def test_gradient_is_simplified():
+    assert [str(partial) for partial in Expression('x * y + 3 * x').gradient()] == ['y + 3', 'x']
+
+
+def test_higher_order_derivatives_are_simplified_at_every_order():
+    assert str(Expression('x * sin(x)').differentiate('x', 3)) == '-sin(x) + (-sin(x) + (-sin(x) + x * -cos(x)))'
+
+
+def test_source_is_not_simplified():
+    assert str(Expression('x * 1 + 0')) == 'x * 1 + 0'
+
+
+def test_simplify():
+    expression = Expression('2 * 3 * x ^ 1 + 0 * y')
+
+    simplified = expression.simplify()
+
+    assert str(simplified) == '6 * x'
+    assert str(expression) == '2 * 3 * x ^ 1 + 0 * y'
+
+
+def test_simplify_keeps_the_variables_of_the_original():
+    simplified = Expression('x + 0 * y').simplify()
+
+    assert simplified.variables == ('x', 'y')
+    assert simplified.evaluate({'x': 2, 'y': 3}) == 2
+    assert simplified != Expression('x')
 
 
 @pytest.mark.parametrize(

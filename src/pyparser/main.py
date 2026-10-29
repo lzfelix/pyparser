@@ -8,6 +8,7 @@ def _evaluation_demo() -> None:
     print(f'Original expression: {source}')
     print(f'Evaluated: {expression.evaluate({})}')
     print(f'Expression reconstructed from tree: {expression}')
+    print(f'Simplified: {expression.simplify()}')
 
 
 def _gradient_descent_demo() -> None:

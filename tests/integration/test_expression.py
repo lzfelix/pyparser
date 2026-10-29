@@ -69,7 +69,7 @@ def test_derivative_keeps_variables_it_no_longer_uses():
 def test_derivative_prints_and_round_trips():
     derivative = Expression('x * sin(x)').differentiate('x')
 
-    assert str(derivative) == '1 * sin(x) + x * (cos(x) * 1)'
+    assert str(derivative) == 'sin(x) + x * cos(x)'
     assert Expression(str(derivative)) == derivative
 
 

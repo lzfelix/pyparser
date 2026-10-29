@@ -7,6 +7,7 @@ from pyparser.lexer import tokenizer
 from pyparser.operations import evaluator, printer
 from pyparser.operations.differentiator import differentiate
 from pyparser.operations.helpers import variable_uses
+from pyparser.operations.simplifier import simplify
 from pyparser.parser import ast, parser
 
 
@@ -20,6 +21,7 @@ class Expression:
     name and then index; built-in constants are not variables. Expressions are immutable:
     differentiating returns a new `Expression` that keeps the variables of the original, so
     every derivative can be evaluated at the same point and differentiated again.
+    Derivatives are simplified; the expression itself keeps the tree its source gives.
     """
 
     _tree: ast.Node
@@ -73,7 +75,7 @@ class Expression:
         """Builds the `order`-th partial derivative with respect to `var`.
 
         `var` must be one of the expression's variables, plain (`'x'`) or indexed (`'x[1]'`).
-        Order 0 returns this same expression. The result is not simplified.
+        Order 0 returns this same expression. Each order is simplified before the next.
         """
         if isinstance(order, bool) or not isinstance(order, int) or order < 0:
             raise ExpressionError(f'Derivative order must be a non-negative integer, got {order!r}')
@@ -84,14 +86,21 @@ class Expression:
 
         tree = self._tree
         for _ in range(order):
-            tree = differentiate(tree, target)
+            tree = simplify(differentiate(tree, target))
         return Expression._from_tree(tree, self._uses)
 
     def gradient(self) -> tuple[Expression, ...]:
         """Builds the first partial derivative with respect to every variable, indexed ones
         included, in the same sorted order as `variables`.
         """
-        return tuple(Expression._from_tree(differentiate(self._tree, use), self._uses) for use in self._uses)
+        return tuple(Expression._from_tree(simplify(differentiate(self._tree, use)), self._uses) for use in self._uses)
+
+    def simplify(self) -> Expression:
+        """Builds an equivalent expression with arithmetic on numbers computed and terms that
+        don't change the result removed. It keeps the variables of this expression, even ones
+        it no longer uses.
+        """
+        return Expression._from_tree(simplify(self._tree), self._uses)
 
     def _variable(self, var: str) -> Variable:
         node = _parse_variable(var)

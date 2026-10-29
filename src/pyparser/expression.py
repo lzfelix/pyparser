@@ -22,8 +22,6 @@ class Expression:
     every derivative can be evaluated at the same point and differentiated again.
     """
 
-    __slots__ = ('_tree', '_uses')
-
     _tree: ast.Node
     _uses: tuple[Variable, ...]
 
